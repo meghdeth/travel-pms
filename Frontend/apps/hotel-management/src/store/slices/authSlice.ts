@@ -54,9 +54,12 @@ export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async (credentials: { email: string; password: string }, { rejectWithValue }) => {
     try {
+      console.log('🔐 [AuthSlice] Starting login with:', credentials.email)
       const response = await hotelAuthService.login(credentials.email, credentials.password)
+      console.log('✅ [AuthSlice] Login successful, response:', response)
       return response
     } catch (error: any) {
+      console.error('❌ [AuthSlice] Login failed:', error.message)
       return rejectWithValue(error.message || 'Login failed')
     }
   }
@@ -80,12 +83,17 @@ export const initializeAuth = createAsyncThunk(
   'auth/initializeAuth',
   async (_, { rejectWithValue }) => {
     try {
+      console.log('🔄 [AuthSlice] initializeAuth called')
       const isAuthenticated = hotelAuthService.isAuthenticated()
+      console.log('🔄 [AuthSlice] isAuthenticated check:', isAuthenticated)
+      
       if (isAuthenticated) {
         const user = hotelAuthService.getUser()
         const hotel = hotelAuthService.getHotel()
         const token = hotelAuthService.getToken()
         const refreshToken = hotelAuthService.getRefreshToken()
+        
+        console.log('🔄 [AuthSlice] Retrieved from service - user:', !!user, 'hotel:', !!hotel, 'token:', !!token)
         
         return {
           user,
@@ -95,6 +103,8 @@ export const initializeAuth = createAsyncThunk(
           isAuthenticated: true
         }
       }
+      
+      console.log('🔄 [AuthSlice] Not authenticated, returning null state')
       return {
         user: null,
         hotel: null,
@@ -103,6 +113,7 @@ export const initializeAuth = createAsyncThunk(
         isAuthenticated: false
       }
     } catch (error: any) {
+      console.error('❌ [AuthSlice] initializeAuth error:', error)
       return rejectWithValue(error.message || 'Failed to initialize auth')
     }
   }

@@ -10,7 +10,9 @@
       "Bash(npx knex migrate:status:*)",
       "Bash(node:*)",
       "Bash(timeout:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(npm install:*)",
+      "WebFetch(domain:localhost)"
     ],
     "deny": [],
     "ask": []

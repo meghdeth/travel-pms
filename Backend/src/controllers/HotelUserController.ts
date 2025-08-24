@@ -226,7 +226,7 @@ export class HotelUserController {
       }
 
       // Generate unique hotel user ID
-      const hotel_user_id = UniqueIdGenerator.generateHotelUserId(role, hotel_id);
+      const hotel_user_id = await UniqueIdGenerator.generateHotelUserId(role, hotel_id);
 
       // Get role permissions
       const permissions = JSON.stringify(UniqueIdGenerator.getHotelRolePermissions(role));

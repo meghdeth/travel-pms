@@ -30,8 +30,7 @@ const Sidebar: React.FC = () => {
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/rooms', icon: Hotel, label: 'Room Management' },
     { path: '/bookings', icon: Calendar, label: 'Bookings' },
-    // Only show Staff Management for Hotel Admins - Fixed role check
-    ...(isAdmin ? [{ path: '/staff', icon: Users, label: 'Staff Management' }] : []),
+    { path: '/staff', icon: Users, label: 'Staff Management' },
     { path: '/facilities', icon: Waves, label: 'Facilities' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
     { path: '/profile', icon: UserCog, label: 'Profile' },

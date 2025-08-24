@@ -22,12 +22,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const dispatch = useAppDispatch()
   const { user, hotel, isAuthenticated, isLoading } = useAppSelector((state) => state.auth)
+  const [isClientMounted, setIsClientMounted] = React.useState(false)
 
-  // Initialize auth state on component mount
+  // Ensure we're on the client side before initializing auth
   useEffect(() => {
-    console.log('🔄 [AuthProvider] Initializing auth state')
-    dispatch(initializeAuth())
-  }, [dispatch])
+    setIsClientMounted(true)
+  }, [])
+
+  // Initialize auth state only after client-side hydration
+  useEffect(() => {
+    if (isClientMounted) {
+      console.log('🔄 [AuthProvider] Client mounted, initializing auth state')
+      dispatch(initializeAuth())
+    }
+  }, [dispatch, isClientMounted])
 
   // Debug user state changes
   useEffect(() => {

@@ -19,8 +19,12 @@ apiClient.interceptors.request.use(
     // Use cookie-based authentication instead of localStorage
     const token = cookieAuthService.getAuthToken();
     
+    console.log('🔐 [API] Request interceptor - Token exists:', !!token);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔐 [API] Added Authorization header for:', config.url);
+    } else {
+      console.log('🔐 [API] No token available for request:', config.url);
     }
     return config;
   },
@@ -37,7 +41,15 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     if (process.env.NODE_ENV === 'development') {
-      console.error('API Error:', error.config?.url, error.response?.status, error.response?.data, error.message);
+      console.error('🚨 [API] Error Details:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        hasAuthHeader: !!error.config?.headers?.Authorization
+      });
     }
     
     // Handle authentication errors

@@ -42,11 +42,14 @@ router.post('/logout', authenticateHotelToken, authController.logout);
 // Hotel User Management Routes
 // ============================
 
-// New endpoint: Get all users for a specific hotel (for hotel admin) - MUST be first to avoid conflicts
-router.get('/:hotelId/users', authenticateHotelToken, hotelUserController.getHotelUsers);
+// Get current user profile
+router.get('/user/profile', authenticateHotelToken, hotelUserController.getCurrentProfile);
 
-// Get all hotel users (staff) - Remove the conflicting route
-// router.get('/:hotel_id/users', authenticateHotelToken, hotelUserController.getStaffMembers);
+// Get staff statistics - MUST be before parameterized routes to avoid conflicts
+router.get('/:hotel_id/users/statistics', authenticateHotelToken, hotelUserController.getStaffStatistics);
+
+// New endpoint: Get all users for a specific hotel (for hotel admin)
+router.get('/:hotelId/users', authenticateHotelToken, hotelUserController.getHotelUsers);
 
 // Get specific hotel user
 router.get('/:hotel_id/users/:id', authenticateHotelToken, hotelUserController.getStaffMember);
@@ -60,14 +63,8 @@ router.put('/:hotel_id/users/:id', authenticateHotelToken, hotelUserController.u
 // Delete hotel user
 router.delete('/:hotel_id/users/:id', authenticateHotelToken, hotelUserController.deleteStaffMember);
 
-// Get current user profile
-router.get('/user/profile', authenticateHotelToken, hotelUserController.getCurrentProfile);
-
 // Update staff password
 router.put('/:hotel_id/users/:id/password', authenticateHotelToken, hotelUserController.updateStaffPassword);
-
-// Get staff statistics
-router.get('/:hotel_id/users/statistics', authenticateHotelToken, hotelUserController.getStaffStatistics);
 
 // Hotel Management Routes
 // ======================

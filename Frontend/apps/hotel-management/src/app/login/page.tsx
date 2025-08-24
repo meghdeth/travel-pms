@@ -26,28 +26,22 @@ export default function LoginPage() {
   // Test credentials for different roles
   const testCredentials = [
     {
+      role: 'GOD Admin',
+      email: 'god@hotelpms.com',
+      password: 'GodAdmin123!',
+      description: 'Full system access - create, edit, delete everything'
+    },
+    {
+      role: 'Super Admin',
+      email: 'super@hotelpms.com', 
+      password: 'SuperAdmin123!',
+      description: 'Full access except delete operations'
+    },
+    {
       role: 'Hotel Admin',
-      email: 'admin@grandhotel.com',
-      password: 'admin123',
-      description: 'Full access to all hotel management features'
-    },
-    {
-      role: 'Front Desk',
-      email: 'frontdesk@grandhotel.com', 
-      password: 'frontdesk123',
-      description: 'Check-in/out, reservations, guest services'
-    },
-    {
-      role: 'Housekeeping',
-      email: 'housekeeping@grandhotel.com',
-      password: 'housekeeping123', 
-      description: 'Room status, cleaning schedules, maintenance'
-    },
-    {
-      role: 'Manager',
-      email: 'manager@grandhotel.com',
-      password: 'manager123',
-      description: 'Reports, staff management, operations oversight'
+      email: 'admin@grandhoteldowntown.com',
+      password: 'Admin123!', 
+      description: 'Hotel management, no system-level access'
     }
   ]
 

@@ -447,7 +447,31 @@ class HotelApiService {
   async getStaffMembers(hotelId: string): Promise<StaffMember[]> {
     try {
       const response = await apiClient.get(`${this.baseUrl}/${hotelId}/users`)
-      return response.data
+      const data = response.data.data || response.data
+      
+      // Handle both direct array and nested data structure
+      const staffData = Array.isArray(data) ? data : (data.users || [])
+      
+      // Map role codes to names
+      const roleCodeToName: { [key: string]: string } = {
+        '1': 'Hotel Admin',
+        '2': 'Manager', 
+        '3': 'Finance Department',
+        '4': 'Front Desk',
+        '5': 'Booking Agent',
+        '6': 'Gatekeeper',
+        '7': 'Support',
+        '8': 'Tech Support',
+        '9': 'Service Boy',
+        '10': 'Maintenance',
+        '11': 'Kitchen'
+      }
+      
+      // Transform data to match frontend expectations
+      return staffData.map((staff: any) => ({
+        ...staff,
+        role: roleCodeToName[staff.role] || staff.role
+      }))
     } catch (error) {
       console.error('Error fetching staff members:', error)
       throw error
@@ -456,8 +480,48 @@ class HotelApiService {
 
   async createStaffMember(hotelId: string, staffData: CreateStaffMemberData): Promise<StaffMember> {
     try {
-      const response = await apiClient.post(`${this.baseUrl}/${hotelId}/users`, staffData)
-      return response.data
+      // Map role names to codes before sending to backend
+      const roleNameToCode: { [key: string]: string } = {
+        'Hotel Admin': '1',
+        'Manager': '2',
+        'Finance Department': '3',
+        'Front Desk': '4',
+        'Booking Agent': '5',
+        'Gatekeeper': '6',
+        'Support': '7',
+        'Tech Support': '8',
+        'Service Boy': '9',
+        'Maintenance': '10',
+        'Kitchen': '11'
+      }
+      
+      const backendData = {
+        ...staffData,
+        role: roleNameToCode[staffData.role] || staffData.role
+      }
+      
+      const response = await apiClient.post(`${this.baseUrl}/${hotelId}/users`, backendData)
+      const data = response.data.data || response.data
+      
+      // Map role code back to name for frontend
+      const roleCodeToName: { [key: string]: string } = {
+        '1': 'Hotel Admin',
+        '2': 'Manager',
+        '3': 'Finance Department',
+        '4': 'Front Desk',
+        '5': 'Booking Agent',
+        '6': 'Gatekeeper',
+        '7': 'Support',
+        '8': 'Tech Support',
+        '9': 'Service Boy',
+        '10': 'Maintenance',
+        '11': 'Kitchen'
+      }
+      
+      return {
+        ...data,
+        role: roleCodeToName[data.role] || data.role
+      }
     } catch (error) {
       console.error('Error creating staff member:', error)
       throw error
@@ -466,8 +530,48 @@ class HotelApiService {
 
   async updateStaffMember(hotelId: string, staffId: string, staffData: UpdateStaffMemberData): Promise<StaffMember> {
     try {
-      const response = await apiClient.put(`${this.baseUrl}/${hotelId}/users/${staffId}`, staffData)
-      return response.data
+      // Map role names to codes before sending to backend
+      const roleNameToCode: { [key: string]: string } = {
+        'Hotel Admin': '1',
+        'Manager': '2',
+        'Finance Department': '3',
+        'Front Desk': '4',
+        'Booking Agent': '5',
+        'Gatekeeper': '6',
+        'Support': '7',
+        'Tech Support': '8',
+        'Service Boy': '9',
+        'Maintenance': '10',
+        'Kitchen': '11'
+      }
+      
+      const backendData = {
+        ...staffData,
+        role: staffData.role ? roleNameToCode[staffData.role] || staffData.role : undefined
+      }
+      
+      const response = await apiClient.put(`${this.baseUrl}/${hotelId}/users/${staffId}`, backendData)
+      const data = response.data.data || response.data
+      
+      // Map role code back to name for frontend
+      const roleCodeToName: { [key: string]: string } = {
+        '1': 'Hotel Admin',
+        '2': 'Manager',
+        '3': 'Finance Department',
+        '4': 'Front Desk',
+        '5': 'Booking Agent',
+        '6': 'Gatekeeper',
+        '7': 'Support',
+        '8': 'Tech Support',
+        '9': 'Service Boy',
+        '10': 'Maintenance',
+        '11': 'Kitchen'
+      }
+      
+      return {
+        ...data,
+        role: roleCodeToName[data.role] || data.role
+      }
     } catch (error) {
       console.error('Error updating staff member:', error)
       throw error
@@ -486,7 +590,16 @@ class HotelApiService {
   async getStaffStatistics(hotelId: string): Promise<StaffStatistics> {
     try {
       const response = await apiClient.get(`${this.baseUrl}/${hotelId}/users/statistics`)
-      return response.data
+      const data = response.data.data || response.data
+      
+      // Transform statistics to match frontend expectations
+      return {
+        totalStaff: data.totalStaff || data.total_staff || 0,
+        activeStaff: data.activeStaff || data.active_staff || 0,
+        inactiveStaff: data.inactiveStaff || data.inactive_staff || 0,
+        suspendedStaff: data.suspendedStaff || data.suspended_staff || 0,
+        roleDistribution: data.roleDistribution || data.role_distribution || []
+      }
     } catch (error) {
       console.error('Error fetching staff statistics:', error)
       throw error
@@ -495,8 +608,28 @@ class HotelApiService {
 
   async updateStaffStatus(hotelId: string, staffId: string, status: 'active' | 'inactive' | 'suspended'): Promise<StaffMember> {
     try {
-      const response = await apiClient.patch(`${this.baseUrl}/${hotelId}/staff/${staffId}/status`, { status })
-      return response.data
+      // Use the PUT users endpoint to update just the status
+      const response = await apiClient.put(`${this.baseUrl}/${hotelId}/users/${staffId}`, { status })
+      const data = response.data.data || response.data
+      
+      // Map role code back to name for frontend
+      const roleCodeToName: { [key: string]: string } = {
+        '0': 'GOD Admin',
+        '1': 'Super Admin', 
+        '2': 'Hotel Admin',
+        '3': 'Manager',
+        '4': 'Finance Department',
+        '5': 'Front Desk',
+        '6': 'Booking Agent',
+        '7': 'Gatekeeper',
+        '8': 'Support',
+        '9': 'Tech Support'
+      }
+      
+      return {
+        ...data,
+        role: roleCodeToName[data.role] || data.role
+      }
     } catch (error) {
       console.error('Error updating staff status:', error)
       throw error

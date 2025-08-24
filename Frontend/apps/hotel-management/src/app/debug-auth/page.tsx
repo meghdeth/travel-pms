@@ -43,11 +43,8 @@ export default function DebugAuthPage() {
       localStorage.clear()
       console.log('🧹 Cleared localStorage')
       
-      // Perform login
-      const result = await hotelAuthService.login({
-        email: 'admin@grandhotel.com',
-        password: 'Admin123!'
-      })
+      // Perform login with correct credentials
+      const result = await hotelAuthService.login('god@hotelpms.com', 'GodAdmin123!')
       
       console.log('✅ Login successful:', result)
       
@@ -222,7 +219,7 @@ export default function DebugAuthPage() {
             disabled={loading}
             className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 disabled:opacity-50"
           >
-            {loading ? 'Testing Login...' : 'Test Login (admin@grandhotel.com)'}
+            {loading ? 'Testing Login...' : 'Test Login (god@hotelpms.com)'}
           </button>
           
           {loginResult && (

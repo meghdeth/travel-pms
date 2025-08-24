@@ -14,6 +14,19 @@ interface CookieOptions {
 class CookieAuthService {
   private isClient = typeof window !== 'undefined';
 
+  // Alternative method for SSR-compatible cookie handling
+  private getSSRCookie(name: string): string | null {
+    if (typeof document === 'undefined') return null;
+    
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      const cookieValue = parts.pop()?.split(';').shift() || null;
+      return cookieValue ? decodeURIComponent(cookieValue) : null;
+    }
+    return null;
+  }
+
   // Migration utility to move from localStorage to cookies
   private migrateFromLocalStorage(): void {
     if (!this.isClient) return;
@@ -66,9 +79,9 @@ class CookieAuthService {
 
     const defaultOptions: CookieOptions = {
       path: '/',
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // For development, set to false
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60, // 7 days in seconds (not milliseconds)
       ...options
     };
 
@@ -93,13 +106,20 @@ class CookieAuthService {
       cookieString += `; samesite=${defaultOptions.sameSite}`;
     }
 
+    console.log('🍪 [CookieAuth] Setting cookie:', cookieString);
     document.cookie = cookieString;
   }
 
-  // Get cookie value
+  // Get cookie value - SSR compatible
   getCookie(name: string): string | null {
     if (!this.isClient) {
       console.log(`🍪 [CookieAuth] getCookie(${name}): Not on client side`);
+      return null;
+    }
+
+    // Ensure document is available
+    if (typeof document === 'undefined') {
+      console.log(`🍪 [CookieAuth] getCookie(${name}): Document not available`);
       return null;
     }
 
@@ -126,15 +146,32 @@ class CookieAuthService {
     this.setCookie(name, '', { expires: new Date(0), path });
   }
 
-  // Auth token methods
+  // Auth token methods - with localStorage fallback for development
   setAuthToken(token: string): void {
     this.setCookie('hotel_token', token);
+    // Also store in localStorage as fallback for development
+    if (this.isClient && localStorage) {
+      localStorage.setItem('hotel_token_backup', token);
+    }
   }
 
   getAuthToken(): string | null {
     // Try migration first
     this.migrateFromLocalStorage();
-    return this.getCookie('hotel_token');
+    let token = this.getCookie('hotel_token');
+    
+    // Fallback to localStorage for development
+    if (!token && this.isClient && localStorage) {
+      token = localStorage.getItem('hotel_token_backup');
+      if (token) {
+        console.log('🔍 [CookieAuth] Using token from localStorage fallback');
+        // Re-set the cookie if we found token in localStorage
+        this.setCookie('hotel_token', token);
+      }
+    }
+    
+    console.log('🔍 [CookieAuth] getAuthToken() result:', token ? 'TOKEN_EXISTS' : 'NO_TOKEN');
+    return token;
   }
 
   setRefreshToken(token: string): void {
@@ -147,6 +184,10 @@ class CookieAuthService {
 
   setUser(user: any): void {
     this.setCookie('hotel_user', JSON.stringify(user));
+    // Also store in localStorage as fallback for development
+    if (this.isClient && localStorage) {
+      localStorage.setItem('hotel_user_backup', JSON.stringify(user));
+    }
   }
 
   getUser(): any {
@@ -154,7 +195,18 @@ class CookieAuthService {
     // Try migration first
     this.migrateFromLocalStorage();
     
-    const userStr = this.getCookie('hotel_user');
+    let userStr = this.getCookie('hotel_user');
+    
+    // Fallback to localStorage for development
+    if (!userStr && this.isClient && localStorage) {
+      userStr = localStorage.getItem('hotel_user_backup');
+      if (userStr) {
+        console.log('🔍 [CookieAuth] Using user from localStorage fallback');
+        // Re-set the cookie if we found user in localStorage
+        this.setCookie('hotel_user', userStr);
+      }
+    }
+    
     console.log('🔍 [CookieAuth] getUser() userStr:', userStr);
     if (!userStr) {
       console.log('🔍 [CookieAuth] getUser() returning null - no userStr');
@@ -173,10 +225,25 @@ class CookieAuthService {
 
   setHotel(hotel: any): void {
     this.setCookie('hotel_data', JSON.stringify(hotel));
+    // Also store in localStorage as fallback for development
+    if (this.isClient && localStorage) {
+      localStorage.setItem('hotel_data_backup', JSON.stringify(hotel));
+    }
   }
 
   getHotel(): any {
-    const hotelStr = this.getCookie('hotel_data');
+    let hotelStr = this.getCookie('hotel_data');
+    
+    // Fallback to localStorage for development
+    if (!hotelStr && this.isClient && localStorage) {
+      hotelStr = localStorage.getItem('hotel_data_backup');
+      if (hotelStr) {
+        console.log('🔍 [CookieAuth] Using hotel from localStorage fallback');
+        // Re-set the cookie if we found hotel in localStorage
+        this.setCookie('hotel_data', hotelStr);
+      }
+    }
+    
     if (!hotelStr) return null;
     
     try {
@@ -194,6 +261,13 @@ class CookieAuthService {
     this.removeCookie('hotel_user');
     this.removeCookie('hotel_data');
     
+    // Also clear localStorage fallbacks
+    if (this.isClient && localStorage) {
+      localStorage.removeItem('hotel_token_backup');
+      localStorage.removeItem('hotel_user_backup');
+      localStorage.removeItem('hotel_data_backup');
+    }
+    
     // Also clear other auth tokens
     this.removeCookie('authToken');
     this.removeCookie('vendor_token');
@@ -202,7 +276,9 @@ class CookieAuthService {
 
   // Check if user is authenticated
   isAuthenticated(): boolean {
-    return !!this.getAuthToken();
+    const token = this.getAuthToken();
+    console.log('🔍 [CookieAuth] isAuthenticated() token:', token ? 'EXISTS' : 'MISSING');
+    return !!token;
   }
 
   // Get hotel ID

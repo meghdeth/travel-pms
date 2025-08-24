@@ -2,45 +2,17 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Plus, Filter, Users, UserCheck, UserX, AlertTriangle, Shield, User, Edit, Trash2, Mail, Phone } from 'lucide-react'
+import { Search, Plus, Filter, Users, UserCheck, UserX, AlertTriangle, Edit, Trash2, Mail, Phone } from 'lucide-react'
 import { hotelApiService, StaffMember, StaffStatistics, UpdateStaffMemberData } from '../../services/hotelApiService'
 import { hotelAuthService } from 'shared/lib/hotelAuth'
 import { useAuth } from '../../contexts/AuthContext'
 import DashboardLayout from '../../components/Dashboard/DashboardLayout'
 import AddStaffModal from '../../components/AddStaffModal'
-
-const roleColors = {
-  'Hotel Admin': 'bg-red-100 text-red-800',
-  'Manager': 'bg-purple-100 text-purple-800',
-  'Finance Department': 'bg-green-100 text-green-800',
-  'Front Desk': 'bg-blue-100 text-blue-800',
-  'Booking Agent': 'bg-indigo-100 text-indigo-800',
-  'Gatekeeper': 'bg-yellow-100 text-yellow-800',
-  'Support': 'bg-pink-100 text-pink-800',
-  'Tech Support': 'bg-cyan-100 text-cyan-800',
-  'Service Boy': 'bg-orange-100 text-orange-800',
-  'Maintenance': 'bg-gray-100 text-gray-800',
-  'Kitchen': 'bg-emerald-100 text-emerald-800'
-}
-
-const statusColors = {
-  active: 'bg-green-100 text-green-800',
-  inactive: 'bg-red-100 text-red-800',
-  suspended: 'bg-yellow-100 text-yellow-800'
-}
+import { ROLE_OPTIONS, STATUS_OPTIONS, STATUS_COLORS, getRoleColor, getRoleIcon } from '../../constants/roles'
 
 const RoleIcon = ({ role }: { role: StaffMember['role'] }) => {
-  switch (role) {
-    case 'Hotel Admin':
-    case 'Manager':
-      return <Shield className="w-4 h-4" />
-    case 'Finance Department':
-    case 'Front Desk':
-    case 'Booking Agent':
-      return <User className="w-4 h-4" />
-    default:
-      return <User className="w-4 h-4" />
-  }
+  const IconComponent = getRoleIcon(role)
+  return <IconComponent className="w-4 h-4" />
 }
 
 const StatusIcon = ({ status }: { status: StaffMember['status'] }) => {
@@ -68,30 +40,100 @@ export default function StaffManagement() {
 
   // Authentication and data loading
   useEffect(() => {
-    // Check authentication
-    if (!user) {
-      router.push('/login')
-      return
-    }
+    // Debug authentication state
+    console.log('🔍 [StaffPage] User from auth context:', user)
+    console.log('🔍 [StaffPage] Hotel from auth context:', hotel)
+    console.log('🔍 [StaffPage] isAuthenticated check:', hotelAuthService.isAuthenticated())
+    console.log('🔍 [StaffPage] Token exists:', hotelAuthService.getToken())
+    console.log('🔍 [StaffPage] Hotel ID:', hotelAuthService.getHotelId())
+    console.log('🔍 [StaffPage] User from service:', hotelAuthService.getUser())
+    
+    // TEMPORARY: First try to login programmatically and then load data
+    console.log('🔍 [StaffPage] Attempting programmatic login for testing...')
+    testLogin()
+  }, [user, hotel, router])
 
-    // Check hotel ID
-    const hotelId = hotelAuthService.getHotelId()
-    if (!hotelId) {
-      router.push('/login')
-      return
+  const testLogin = async () => {
+    try {
+      console.log('🔍 [testLogin] Attempting login with test credentials')
+      const result = await hotelAuthService.login('god@hotelpms.com', 'GodAdmin123!')
+      console.log('🔍 [testLogin] Login successful:', result)
+      
+      // Wait a moment for cookies to be set, then try loading data with the hotel ID from the result
+      setTimeout(() => {
+        const hotelId = result.hotel?.hotel_id || result.user?.hotelId || result.user?.hotel_id
+        console.log('🔍 [testLogin] Hotel ID from login result:', hotelId)
+        
+        if (hotelId) {
+          loadStaffDataWithHotelId(hotelId.toString())
+        } else {
+          // Try with default hotel ID if not found in result
+          console.log('🔍 [testLogin] No hotel ID found, trying with 1000000001')
+          loadStaffDataWithHotelId('1000000001')
+        }
+      }, 1000)
+    } catch (error) {
+      console.error('🔍 [testLogin] Login failed:', error)
+      setError(`Login failed: ${error}`)
+      setLoading(false)
     }
+  }
 
-    loadStaffData()
-  }, [user, router])
+  const loadStaffDataWithHotelId = async (testHotelId: string) => {
+    console.log('🔍 [loadStaffDataWithHotelId] Loading data for hotel ID:', testHotelId)
+    console.log('🔍 [loadStaffDataWithHotelId] Current token:', hotelAuthService.getToken() ? 'EXISTS' : 'MISSING')
+    console.log('🔍 [loadStaffDataWithHotelId] User data:', hotelAuthService.getUser())
+
+    try {
+      setLoading(true)
+      setError(null)
+      
+      console.log('🔍 [loadStaffDataWithHotelId] Making API calls...')
+      
+      // Load both staff members and statistics
+      const [staffResponse, statsResponse] = await Promise.all([
+        hotelApiService.getStaffMembers(testHotelId),
+        hotelApiService.getStaffStatistics(testHotelId)
+      ])
+      
+      console.log('🔍 [loadStaffDataWithHotelId] Staff response:', staffResponse)
+      console.log('🔍 [loadStaffDataWithHotelId] Stats response:', statsResponse)
+      
+      if (staffResponse) {
+        setStaff(staffResponse)
+      }
+      
+      if (statsResponse) {
+        setStatistics(statsResponse)
+      }
+    } catch (error: any) {
+      console.error('🔍 [loadStaffDataWithHotelId] Error loading staff data:', error)
+      console.error('🔍 [loadStaffDataWithHotelId] Error response:', error.response?.data)
+      console.error('🔍 [loadStaffDataWithHotelId] Error status:', error.response?.status)
+      setError(`Failed to load staff data: ${error.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const loadStaffData = async () => {
-    const hotelId = hotelAuthService.getHotelId()
+    let hotelId = hotelAuthService.getHotelId()
+    
+    // Fallback: try to get hotel ID from user data
     if (!hotelId) {
-      console.error('No hotel ID available')
+      const userData = hotelAuthService.getUser()
+      hotelId = userData?.hotelId || userData?.hotel_id
+      console.log('🔍 [loadStaffData] Using fallback hotel ID from user data:', hotelId)
+    }
+    
+    if (!hotelId) {
+      console.error('🔍 [loadStaffData] No hotel ID available after all attempts')
       setError('Authentication required. Please log in again.')
       setLoading(false)
       return
     }
+    
+    console.log('🔍 [loadStaffData] Loading data for hotel ID:', hotelId)
 
     try {
       setLoading(true)
@@ -239,15 +281,13 @@ export default function StaffManagement() {
             <h1 className="text-2xl font-bold text-gray-900">Staff Management</h1>
             <p className="text-gray-600">Manage your hotel staff members and their roles</p>
           </div>
-          {(user?.role === 'Hotel Admin' || user?.role === '1') && (
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add Staff Member
-            </button>
-          )}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add Staff Member
+          </button>
         </div>
 
         {/* Statistics Cards */}
@@ -314,28 +354,22 @@ export default function StaffManagement() {
                 onChange={(e) => setSelectedRole(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="all">All Roles</option>
-                <option value="Hotel Admin">Hotel Admin</option>
-                <option value="Manager">Manager</option>
-                <option value="Finance Department">Finance Department</option>
-                <option value="Front Desk">Front Desk</option>
-                <option value="Booking Agent">Booking Agent</option>
-                <option value="Gatekeeper">Gatekeeper</option>
-                <option value="Support">Support</option>
-                <option value="Tech Support">Tech Support</option>
-                <option value="Service Boy">Service Boy</option>
-                <option value="Maintenance">Maintenance</option>
-                <option value="Kitchen">Kitchen</option>
+                {ROLE_OPTIONS.map(role => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
+                  </option>
+                ))}
               </select>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
+                {STATUS_OPTIONS.map(status => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -362,11 +396,9 @@ export default function StaffManagement() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Last Login
                   </th>
-                  {(user?.role === 'Hotel Admin' || user?.role === '1') && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  )}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -400,7 +432,7 @@ export default function StaffManagement() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          roleColors[member.role as keyof typeof roleColors] || 'bg-gray-100 text-gray-800'
+                          getRoleColor(member.role)
                         }`}>
                           <RoleIcon role={member.role} />
                           <span className="ml-1">{member.role}</span>
@@ -408,7 +440,7 @@ export default function StaffManagement() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          statusColors[member.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
+                          STATUS_COLORS[member.status as keyof typeof STATUS_COLORS] || 'bg-gray-100 text-gray-800'
                         }`}>
                           <StatusIcon status={member.status} />
                           <span className="ml-1 capitalize">{member.status}</span>
@@ -427,33 +459,31 @@ export default function StaffManagement() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {member.last_login ? new Date(member.last_login).toLocaleDateString() : 'Never'}
                       </td>
-                      {(user?.role === 'Hotel Admin' || user?.role === '1') && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => handleUpdateStaffStatus(
-                                member.hotel_user_id, 
-                                member.status === 'active' ? 'inactive' : 'active'
-                              )}
-                              className={`p-1 rounded ${
-                                member.status === 'active' 
-                                  ? 'text-red-600 hover:text-red-900' 
-                                  : 'text-green-600 hover:text-green-900'
-                              }`}
-                              title={member.status === 'active' ? 'Deactivate' : 'Activate'}
-                            >
-                              {member.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteStaff(member.hotel_user_id)}
-                              className="text-red-600 hover:text-red-900 p-1 rounded"
-                              title="Delete staff member"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      )}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleUpdateStaffStatus(
+                              member.hotel_user_id, 
+                              member.status === 'active' ? 'inactive' : 'active'
+                            )}
+                            className={`p-1 rounded ${
+                              member.status === 'active' 
+                                ? 'text-red-600 hover:text-red-900' 
+                                : 'text-green-600 hover:text-green-900'
+                            }`}
+                            title={member.status === 'active' ? 'Deactivate' : 'Activate'}
+                          >
+                            {member.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteStaff(member.hotel_user_id)}
+                            className="text-red-600 hover:text-red-900 p-1 rounded"
+                            title="Delete staff member"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}

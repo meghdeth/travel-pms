@@ -6,34 +6,33 @@ export interface UniqueIdConfig {
 
 export class UniqueIdGenerator {
   /**
-   * Generate sequential 10-digit hotel IDs starting from 1000000000
+   * Generate sequential 10-digit hotel IDs starting from 1000000001
    */
   static async generateNumericHotelId(): Promise<number> {
     const { Hotel } = await import('@/models/Hotel');
     
     try {
-      // Get the highest existing hotel_id
-      const result = await Hotel.query()
-        .select('hotel_id')
-        .whereRaw('hotel_id REGEXP "^[0-9]+$"') // Only numeric hotel_ids
-        .orderByRaw('CAST(hotel_id AS UNSIGNED) DESC')
-        .limit(1)
-        .first();
+      let nextId = 1000000001; // Starting ID from 1000000001
       
-      let nextId = 1000000000; // Starting ID
-      
-      if (result && result.hotel_id) {
-        const currentMaxId = parseInt(result.hotel_id);
-        if (currentMaxId >= 1000000000) {
-          nextId = currentMaxId + 1;
+      // Keep checking if the ID exists and increment until we find an available one
+      while (true) {
+        const existingHotel = await Hotel.query()
+          .select('hotel_id')
+          .where('hotel_id', nextId.toString())
+          .first();
+        
+        if (!existingHotel) {
+          // ID is available, return it
+          return nextId;
         }
+        
+        // ID exists, increment and try next one
+        nextId++;
       }
-      
-      return nextId;
     } catch (error) {
       console.error('Error generating sequential hotel ID:', error);
       // Fallback to starting ID if there's an error
-      return 1000000000;
+      return 1000000001;
     }
   }
 
@@ -69,22 +68,56 @@ export class UniqueIdGenerator {
   }
 
   /**
-   * Generate complex format hotel user ID: [entity_type][role][hotel_type][10_digit_hotel_id][5_digit_user_sequence]
+   * Generate hotel user ID in format: [10-digit Hotel ID][1-digit User Type][4-digit User Number]
+   * Example: 100000000110001 = Hotel 1000000001 + GOD Admin (1) + User 0001
    */
-  static generateHotelUserId(role: string, hotelId: string): string {
-    const entityType = '1'; // 1 for hotel users
-    let roleType;
-    switch(role) {
-      case 'Hotel Admin': roleType = '1'; break;
-      case 'Manager': roleType = '2'; break;
-      case 'Front Desk': roleType = '4'; break;
-      default: roleType = '9'; break;
-    }
-    const hotelType = '1'; // 1 for standard hotels
-    const hotelIdPadded = hotelId.toString().padStart(10, '0');
-    const userSequence = '00001'; // Default to 1 for new users
+  static async generateHotelUserId(role: string, hotelId: string): Promise<string> {
+    const { HotelUser } = await import('@/models/HotelUser');
     
-    return `${entityType}${roleType}${hotelType}${hotelIdPadded}${userSequence}`;
+    // User type mapping based on roles
+    const userTypeMap: { [key: string]: string } = {
+      'GOD Admin': '1',
+      'Super Admin': '2',
+      'Hotel Admin': '3',
+      'Manager': '4',
+      'Finance Department': '5',
+      'Front Desk': '6',
+      'Booking Agent': '7',
+      'Gatekeeper': '8',
+      'Support': '9',
+      'Tech Support': '0', // Using 0 for Tech Support (10th type)
+      'Service Boy': '1',  // Can reuse digits for different categories
+      'Maintenance': '2',
+      'Kitchen': '3'
+    };
+    
+    const userType = userTypeMap[role];
+    if (!userType) {
+      throw new Error(`Invalid role: ${role}`);
+    }
+    
+    // Ensure hotel ID is 10 digits
+    const hotelIdFormatted = hotelId.toString().padStart(10, '0');
+    
+    // Get the next user number for this hotel (across all roles)
+    let nextUserNumber = 1;
+    
+    // Keep checking if the user ID exists and increment until we find an available one
+    while (true) {
+      const userId = `${hotelIdFormatted}${userType}${nextUserNumber.toString().padStart(4, '0')}`;
+      
+      const existingUser = await HotelUser.query()
+        .where('hotel_user_id', userId)
+        .first();
+      
+      if (!existingUser) {
+        // ID is available, return it
+        return userId;
+      }
+      
+      // ID exists, increment and try next one
+      nextUserNumber++;
+    }
   }
 
 

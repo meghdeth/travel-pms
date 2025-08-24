@@ -132,7 +132,8 @@ export class AuthService {
     }
     
     const userRole = this.mapRoleToCode(hotelUser.role);
-    const isAdmin = hotelUser.role === 'Hotel Admin';
+    // GOD Admin (0), Super Admin (1), and Hotel Admin (2) are all admin roles
+    const isAdmin = ['GOD Admin', 'Super Admin', 'Hotel Admin'].includes(hotelUser.role) || ['0', '1', '2'].includes(userRole);
     logger.info(`Hotel user found: Role=${hotelUser.role}, Code=${userRole}, IsAdmin=${isAdmin}`);
     
     logger.info(`Password comparison: provided='${password}', stored='${hotelUser.password}'`);
@@ -183,6 +184,8 @@ export class AuthService {
   // Helper method to map role names to numerical codes
   private mapRoleToCode(roleName: string): string {
     const roleMap: { [key: string]: string } = {
+      'GOD Admin': '0',           // Added GOD Admin
+      'Super Admin': '1',         // Added Super Admin  
       'Hotel Admin': '1',
       'Manager': '2', 
       'Finance Department': '3',
@@ -498,7 +501,7 @@ export class AuthService {
     const hotel = await Hotel.query().insert(hotelInsertData);
     
     // Generate unique hotel user ID for admin
-    const hotel_user_id = UniqueIdGenerator.generateHotelUserId('Hotel Admin', hotel.hotel_id!);
+    const hotel_user_id = await UniqueIdGenerator.generateHotelUserId('Hotel Admin', hotel.hotel_id!);
     
     // Get permissions based on role
     const permissions = UniqueIdGenerator.getHotelRolePermissions('Hotel Admin');

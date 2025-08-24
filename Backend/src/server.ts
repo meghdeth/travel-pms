@@ -23,8 +23,9 @@ const allowedOrigins = [
   process.env.VENDOR_DASHBOARD_URL || 'http://localhost:3002', 
   process.env.HOTEL_MANAGEMENT_URL || 'http://localhost:3003',
   process.env.BOOKING_WEBSITE_URL || 'http://localhost:3004',
-  process.env.FRONTEND_URL // Additional frontend URL if specified
-].filter(Boolean); // Remove any undefined values
+  'http://localhost:5001', // Add the actual frontend port
+  process.env.FRONTEND_URL
+].filter((origin): origin is string => Boolean(origin)); // Remove any undefined values with type guard
 
 const io = new Server(server, {
   cors: {

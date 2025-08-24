@@ -74,10 +74,10 @@ export class Hotel extends BaseModel {
   async $beforeInsert(queryContext: QueryContext) {
     await super.$beforeInsert(queryContext);
     
-    // Generate numeric hotel_id instead of time-based
+    // Generate numeric hotel_id starting from 1000000001
     if (!this.hotel_id) {
       const numericId = await UniqueIdGenerator.generateNumericHotelId();
-      this.hotel_id = `HOT${numericId}`;
+      this.hotel_id = numericId.toString(); // Pure numeric ID without prefix
     }
     
 

@@ -45,7 +45,12 @@ export interface HotelAuthResponse {
 
 class HotelAuthService {
 
-  async login(data: HotelLoginData): Promise<HotelAuthResponse> {
+  async login(email: string, password: string): Promise<HotelAuthResponse>;
+  async login(data: HotelLoginData): Promise<HotelAuthResponse>;
+  async login(emailOrData: string | HotelLoginData, password?: string): Promise<HotelAuthResponse> {
+    const data = typeof emailOrData === 'string' 
+      ? { email: emailOrData, password: password! }
+      : emailOrData;
     try {
       // Transform email to identifier for backend compatibility
       const loginPayload = {
@@ -58,16 +63,24 @@ class HotelAuthService {
       
       if (response.data.success) {
         const authData = response.data.data;
-        console.log('HotelAuth - Auth data:', authData);
-        console.log('HotelAuth - Setting token:', authData.token);
-        console.log('HotelAuth - Setting user:', authData.user);
-        console.log('HotelAuth - Setting hotel:', authData.hotel);
+        console.log('🔐 [HotelAuth] Auth data received:', authData);
+        console.log('🔐 [HotelAuth] Setting token:', authData.token);
+        console.log('🔐 [HotelAuth] Setting user:', authData.user);
+        console.log('🔐 [HotelAuth] Setting hotel:', authData.hotel);
+        
+        // Set auth data in cookies
         cookieAuthService.setAuthToken(authData.token);
         cookieAuthService.setRefreshToken(authData.refreshToken);
         cookieAuthService.setUser(authData.user);
         if (authData.hotel) {
           cookieAuthService.setHotel(authData.hotel);
         }
+        
+        // Verify cookies were set
+        console.log('🔐 [HotelAuth] Verification - Token set:', !!cookieAuthService.getAuthToken());
+        console.log('🔐 [HotelAuth] Verification - User set:', !!cookieAuthService.getUser());
+        console.log('🔐 [HotelAuth] Verification - Hotel set:', !!cookieAuthService.getHotel());
+        
         return authData;
       } else {
         throw new Error(response.data.message || 'Login failed');

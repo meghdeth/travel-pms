@@ -23,59 +23,81 @@ export const ENTITY_PREFIXES = {
 };
 
 /**
- * Generate hotel ID in format: 1XXXXXXX (1 + 7-digit number)
+ * Generate hotel ID in format: 1000000001, 1000000002, 1000000003, etc.
+ * Always starts from 1000000001 and increments by 1
  */
 export async function generateHotelId(): Promise<string> {
-  // Get the latest hotel ID
-  const latestHotel = await db('hotels')
-    .select('hotel_id')
-    .where('hotel_id', 'like', '1%')
-    .orderBy('hotel_id', 'desc')
-    .first();
+  let nextId = 1000000001; // Start from 1000000001
   
-  let nextNumber = 1000001; // Start from 1000001
-  
-  if (latestHotel && latestHotel.hotel_id) {
-    const currentNumber = parseInt(latestHotel.hotel_id.substring(1));
-    nextNumber = currentNumber + 1;
+  // Keep checking if the ID exists and increment until we find an available one
+  while (true) {
+    const existingHotel = await db('hotels')
+      .select('hotel_id')
+      .where('hotel_id', nextId.toString())
+      .first();
+    
+    if (!existingHotel) {
+      // ID is available, return it
+      return nextId.toString();
+    }
+    
+    // ID exists, increment and try next one
+    nextId++;
   }
-  
-  return `1${nextNumber.toString().padStart(7, '0')}`;
 }
 
 /**
- * Generate user ID in format: XHHHHHHHRNNNN
- * X = Entity type (1=hotel, 2=vendor)
- * HHHHHHH = Hotel ID (7 digits)
- * R = Role digit
- * NNNN = Sequential user number (4 digits)
+ * Generate user ID in format: [10-digit Hotel ID][1-digit User Type][4-digit User Number]
+ * Example: 100000000110001 = Hotel 1000000001 + GOD Admin (1) + User 0001
  */
 export async function generateUserId(
   hotelId: string, 
-  role: string, 
-  entityType: 'hotel' | 'vendor' = 'hotel'
+  role: string
 ): Promise<string> {
-  const entityPrefix = ENTITY_PREFIXES[entityType.toUpperCase() as keyof typeof ENTITY_PREFIXES];
-  const roleDigit = ROLE_DIGITS[role as keyof typeof ROLE_DIGITS];
+  // User type mapping based on roles
+  const userTypeMap: { [key: string]: string } = {
+    'GOD Admin': '1',
+    'Super Admin': '2',
+    'Hotel Admin': '3',
+    'Manager': '4',
+    'Finance Department': '5',
+    'Front Desk': '6',
+    'Booking Agent': '7',
+    'Gatekeeper': '8',
+    'Support': '9',
+    'Tech Support': '0', // Using 0 for Tech Support (10th type)
+    'Service Boy': '1',  // Can reuse digits for different categories
+    'Maintenance': '2',
+    'Kitchen': '3'
+  };
   
-  if (!roleDigit) {
+  const userType = userTypeMap[role];
+  if (!userType) {
     throw new Error(`Invalid role: ${role}`);
   }
   
-  // Extract hotel number (remove the leading 1 if it's a hotel ID)
-  const hotelNumber = hotelId.startsWith('1') ? hotelId.substring(1) : hotelId;
+  // Ensure hotel ID is 10 digits
+  const hotelIdFormatted = hotelId.toString().padStart(10, '0');
   
-  // Get the count of existing users with this hotel ID and role
-  const userCount = await db('hotel_users')
-    .where({ hotel_id: hotelId, role })
-    .count('id as count');
+  // Get the next user number for this hotel (across all roles)
+  let nextUserNumber = 1;
   
-  const nextUserNumber = (Array.isArray(userCount) ? userCount[0].count : userCount.count) + 1;
-  
-  // Format: EntityPrefix + HotelNumber + RoleDigit + UserNumber
-  const userId = `${entityPrefix}${hotelNumber}${roleDigit}${nextUserNumber.toString().padStart(4, '0')}`;
-  
-  return userId;
+  // Keep checking if the user ID exists and increment until we find an available one
+  while (true) {
+    const userId = `${hotelIdFormatted}${userType}${nextUserNumber.toString().padStart(4, '0')}`;
+    
+    const existingUser = await db('hotel_users')
+      .where('hotel_user_id', userId)
+      .first();
+    
+    if (!existingUser) {
+      // ID is available, return it
+      return userId;
+    }
+    
+    // ID exists, increment and try next one
+    nextUserNumber++;
+  }
 }
 
 /**
