@@ -17,20 +17,25 @@ dotenv.config();
 import hotelRoutes from './routes/hotel';
 import roomRoutes from './routes/room';
 import authRoutes from './routes/auth';
+import dashboardRoutes from './routes/dashboard';
+import staffRoutes from './routes/staff';
+import voucherRoutes from './routes/vouchers';
+import bookingRoutes from './routes/bookings';
 import { errorHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
+import { testConnection } from './config/database';
 
 const app = express();
 const server = createServer(app);
 const io = new SocketIOServer(server, {
   cors: {
-    origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3003'],
+    origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:5001', 'http://localhost:3001'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
   }
 });
 
-const PORT = process.env.PORT || 3003;
+const PORT = process.env.PORT || 3001;
 
 // Security middleware
 app.use(helmet());
@@ -48,7 +53,7 @@ app.use('/api/', limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3003'],
+  origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:5001', 'http://localhost:3001'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -104,6 +109,10 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/hotels', hotelRoutes);
 app.use('/api/v1/rooms', roomRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/staff', staffRoutes);
+app.use('/api/v1/vouchers', voucherRoutes);
+app.use('/api/v1/bookings', bookingRoutes);
 
 // Stats endpoint for Super Admin
 app.get('/api/v1/stats', (req, res) => {
@@ -197,9 +206,12 @@ app.use('*', (req, res) => {
 app.use(errorHandler);
 
 // Start server
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   logger.info(`Hotel Service running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV}`);
+  
+  // Test database connection
+  await testConnection();
 });
 
 // Graceful shutdown

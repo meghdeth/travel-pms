@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3003",
+    "dev": "next dev -p 5001",
     "build": "next build",
-    "start": "next start -p 3003",
+    "start": "next start -p 5001",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
   },
@@ -14,6 +14,7 @@
     "@reduxjs/toolkit": "^2.8.2",
     "@tanstack/react-query": "^4.35.0",
     "@tanstack/react-table": "^8.10.0",
+    "axios": "^1.6.0",
     "date-fns": "^2.30.0",
     "lucide-react": "^0.290.0",
     "next": "14.0.0",

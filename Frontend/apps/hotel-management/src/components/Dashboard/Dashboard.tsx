@@ -1,33 +1,74 @@
 'use client'
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store';
+import AdminDashboard from './AdminDashboard';
+import FrontDeskDashboard from './FrontDeskDashboard';
+import FinanceDashboard from './FinanceDashboard';
+import TasksDashboard from './TasksDashboard';
 
 const Dashboard: React.FC = () => {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Rooms</h3>
-          <p className="text-3xl font-bold text-blue-600">45</p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Available Rooms</h3>
-          <p className="text-3xl font-bold text-green-600">12</p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Occupied Rooms</h3>
-          <p className="text-3xl font-bold text-red-600">33</p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Today's Revenue</h3>
-          <p className="text-3xl font-bold text-orange-600">$2,890</p>
+  const { user } = useSelector((state: RootState) => state.auth);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading
+    setTimeout(() => setLoading(false), 1000);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-300 rounded mb-6 w-1/4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-gray-300 h-32 rounded-lg"></div>
+            ))}
+          </div>
         </div>
       </div>
+    );
+  }
+
+  const renderDashboard = () => {
+    if (!user?.role) return <AdminDashboard />;
+    
+    switch (user.role) {
+      case 'Hotel Admin':
+      case 'Manager':
+        return <AdminDashboard />;
+      case 'Front Desk':
+        return <FrontDeskDashboard />;
+      case 'Finance Department':
+        return <FinanceDashboard />;
+      case 'Maintenance':
+      case 'Kitchen':
+      case 'Service Boy':
+        return <TasksDashboard />;
+      default:
+        return <AdminDashboard />;
+    }
+  };
+
+  return (
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          Welcome back, {user?.firstName || 'User'}!
+        </h1>
+        <p className="text-gray-600 mt-1">
+          {user?.role} Dashboard - {new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}
+        </p>
+      </div>
+      
+      {renderDashboard()}
     </div>
   );
 };
