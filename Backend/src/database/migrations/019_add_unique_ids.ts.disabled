@@ -1,0 +1,50 @@
+import { Knex } from 'knex';
+
+export async function up(knex: Knex): Promise<void> {
+  // Add unique_id to hotels table
+  await knex.schema.alterTable('hotels', (table) => {
+    table.string('unique_id', 20).nullable().unique();
+  });
+
+  // Add unique_id to admins table
+  await knex.schema.alterTable('admins', (table) => {
+    table.string('unique_id', 20).nullable().unique();
+  });
+
+  // Add unique_id to vendors table
+  await knex.schema.alterTable('vendors', (table) => {
+    table.string('unique_id', 20).nullable().unique();
+  });
+
+  // Add unique_id to users table
+  await knex.schema.alterTable('users', (table) => {
+    table.string('unique_id', 20).nullable().unique();
+  });
+
+  // Add unique_id to bookings table
+  await knex.schema.alterTable('bookings', (table) => {
+    table.string('unique_id', 20).nullable().unique();
+  });
+}
+
+export async function down(knex: Knex): Promise<void> {
+  await knex.schema.alterTable('hotels', (table) => {
+    table.dropColumn('unique_id');
+  });
+
+  await knex.schema.alterTable('admins', (table) => {
+    table.dropColumn('unique_id');
+  });
+
+  await knex.schema.alterTable('vendors', (table) => {
+    table.dropColumn('unique_id');
+  });
+
+  await knex.schema.alterTable('users', (table) => {
+    table.dropColumn('unique_id');
+  });
+
+  await knex.schema.alterTable('bookings', (table) => {
+    table.dropColumn('unique_id');
+  });
+}
