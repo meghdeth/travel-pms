@@ -3,14 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
+import { auth } from '../../utils/auth';
 import AdminDashboard from './AdminDashboard';
 import FrontDeskDashboard from './FrontDeskDashboard';
 import FinanceDashboard from './FinanceDashboard';
 import TasksDashboard from './TasksDashboard';
 
 const Dashboard: React.FC = () => {
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user: storeUser } = useSelector((state: RootState) => state.auth);
   const [loading, setLoading] = useState(true);
+  
+  // Use fallback to sessionStorage if Redux user is null
+  const user = storeUser || auth.getUser();
 
   useEffect(() => {
     // Simulate loading
@@ -32,10 +36,16 @@ const Dashboard: React.FC = () => {
     );
   }
 
+  const getRoleName = () => {
+    if (!user?.role) return 'Hotel Admin'
+    if (typeof user.role === 'string') return user.role
+    return (user.role as any)?.name || (user.role as any)?.code || 'Hotel Admin'
+  }
+
   const renderDashboard = () => {
-    if (!user?.role) return <AdminDashboard />;
-    
-    switch (user.role) {
+    const roleName = getRoleName()
+
+    switch (roleName) {
       case 'Hotel Admin':
       case 'Manager':
         return <AdminDashboard />;
@@ -59,7 +69,7 @@ const Dashboard: React.FC = () => {
           Welcome back, {user?.firstName || 'User'}!
         </h1>
         <p className="text-gray-600 mt-1">
-          {user?.role} Dashboard - {new Date().toLocaleDateString('en-US', { 
+          {getRoleName()} Dashboard - {new Date().toLocaleDateString('en-US', { 
             weekday: 'long', 
             year: 'numeric', 
             month: 'long', 

@@ -6,7 +6,7 @@ import { logger } from '../utils/logger';
 const router = express.Router();
 
 // Mock voucher data - replace with actual database queries
-let mockVouchers = [
+let mockVouchers: any[] = [
   {
     id: 1,
     hotelId: 1,
@@ -70,7 +70,7 @@ let mockVouchers = [
 ];
 
 // Mock voucher usage history
-let voucherUsageHistory = [
+let voucherUsageHistory: any[] = [
   {
     id: 1,
     voucherId: 1,
@@ -108,8 +108,8 @@ const verifyToken = (req: any, res: any, next: any) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as any;
-    req.user = decoded;
-    next();
+  req.user = decoded;
+  return next();
   } catch (error) {
     return res.status(401).json({
       success: false,
@@ -142,7 +142,7 @@ const generateVoucherCode = (length: number = 8): string => {
 };
 
 // Get all vouchers
-router.get('/', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Finance Department']), (req: any, res) => {
+router.get('/', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Finance Department']), (req: any, res: any) => {
   try {
     const { hotelId, status, type } = req.query;
     
@@ -176,7 +176,7 @@ router.get('/', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Finance Depar
 });
 
 // Get voucher by ID
-router.get('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Finance Department', 'Front Desk', 'Booking Agent']), (req: any, res) => {
+router.get('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Finance Department', 'Front Desk', 'Booking Agent']), (req: any, res: any) => {
   try {
     const voucherId = parseInt(req.params.id);
     const voucher = mockVouchers.find(v => v.id === voucherId);
@@ -218,7 +218,7 @@ router.post('/validate', verifyToken, [
   body('code').isLength({ min: 1, max: 20 }).trim(),
   body('bookingAmount').isNumeric().isFloat({ min: 0 }),
   body('roomType').optional().isString()
-], (req: any, res) => {
+], (req: any, res: any) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -335,7 +335,7 @@ router.post('/', verifyToken, checkRole(['Hotel Admin', 'Manager']), [
   body('usageLimit').optional().isInt({ min: 1 }),
   body('minBookingAmount').optional().isFloat({ min: 0 }),
   body('maxDiscountAmount').optional().isFloat({ min: 0 })
-], (req: any, res) => {
+], (req: any, res: any) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -435,7 +435,7 @@ router.put('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager']), [
   body('validUntil').optional().isISO8601(),
   body('usageLimit').optional().isInt({ min: 1 }),
   body('status').optional().isIn(['active', 'inactive'])
-], (req: any, res) => {
+], (req: any, res: any) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -507,7 +507,7 @@ router.put('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager']), [
 });
 
 // Delete voucher (soft delete)
-router.delete('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager']), (req: any, res) => {
+router.delete('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager']), (req: any, res: any) => {
   try {
     const voucherId = parseInt(req.params.id);
     const voucherIndex = mockVouchers.findIndex(v => v.id === voucherId);
@@ -552,7 +552,7 @@ router.delete('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager']), (req: 
 });
 
 // Get voucher usage analytics
-router.get('/analytics/usage', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Finance Department']), (req: any, res) => {
+router.get('/analytics/usage', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Finance Department']), (req: any, res: any) => {
   try {
     const { period = 'month', voucherId } = req.query;
     
@@ -611,7 +611,7 @@ router.get('/analytics/usage', verifyToken, checkRole(['Hotel Admin', 'Manager',
         } : null;
       })
       .filter(item => item !== null)
-      .sort((a, b) => (b?.usageCount || 0) - (a?.usageCount || 0))
+  .sort((a: any, b: any) => (b?.usageCount || 0) - (a?.usageCount || 0))
       .slice(0, 5);
 
     res.json({

@@ -6,7 +6,7 @@ import { logger } from '../utils/logger';
 const router = express.Router();
 
 // Mock room data (shared with hotel routes)
-let rooms = [
+let rooms: any[] = [
   {
     id: 1,
     hotelId: 1,
@@ -59,7 +59,7 @@ const verifyToken = (req: any, res: any, next: any) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as any;
     req.user = decoded;
-    next();
+  return next();
   } catch (error) {
     return res.status(401).json({
       success: false,
@@ -69,7 +69,7 @@ const verifyToken = (req: any, res: any, next: any) => {
 };
 
 // Get all rooms
-router.get('/', (req, res) => {
+router.get('/', (req: any, res: any) => {
   try {
     const { hotelId, roomType, capacity, available } = req.query;
     let filteredRooms = rooms;
@@ -106,7 +106,7 @@ router.get('/', (req, res) => {
 });
 
 // Get room by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', (req: any, res: any) => {
   try {
     const roomId = parseInt(req.params.id);
     const room = rooms.find(r => r.id === roomId);
@@ -132,7 +132,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Search available rooms
-router.get('/search', (req, res) => {
+router.get('/search', (req: any, res: any) => {
   try {
     const { checkIn, checkOut, guests, location } = req.query;
     
@@ -171,7 +171,7 @@ router.post('/', [
   body('roomType').isLength({ min: 2, max: 50 }),
   body('capacity').isInt({ min: 1, max: 10 }),
   body('pricePerNight').isFloat({ min: 0 })
-], (req: any, res) => {
+], (req: any, res: any) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -239,7 +239,7 @@ router.put('/:id', [
   body('roomType').optional().isLength({ min: 2, max: 50 }),
   body('capacity').optional().isInt({ min: 1, max: 10 }),
   body('pricePerNight').optional().isFloat({ min: 0 })
-], (req: any, res) => {
+], (req: any, res: any) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -299,7 +299,7 @@ router.put('/:id', [
 });
 
 // Delete room
-router.delete('/:id', verifyToken, (req: any, res) => {
+router.delete('/:id', verifyToken, (req: any, res: any) => {
   try {
     const roomId = parseInt(req.params.id);
     const roomIndex = rooms.findIndex(r => r.id === roomId);
@@ -347,7 +347,7 @@ router.delete('/:id', verifyToken, (req: any, res) => {
 router.patch('/:id/status', [
   verifyToken,
   body('status').isIn(['available', 'occupied', 'maintenance', 'out_of_order'])
-], (req: any, res) => {
+], (req: any, res: any) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

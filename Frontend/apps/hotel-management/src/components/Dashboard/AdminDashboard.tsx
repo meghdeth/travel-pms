@@ -70,14 +70,14 @@ const AdminDashboard: React.FC = () => {
         dashboardApi.getAdminActivity()
       ]);
       
-      if (kpiResponse?.success) {
-        setKpiData(kpiResponse.data);
+      if (kpiResponse && (kpiResponse as any).data) {
+        setKpiData((kpiResponse as any).data);
       } else {
         throw new Error('Failed to fetch KPI data');
       }
       
-      if (activityResponse?.success) {
-        setActivityData(activityResponse.data);
+      if (activityResponse && (activityResponse as any).data) {
+        setActivityData((activityResponse as any).data);
       } else {
         throw new Error('Failed to fetch activity data');
       }
@@ -98,13 +98,10 @@ const AdminDashboard: React.FC = () => {
       <div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[1, 2, 3, 4].map((i) => (
-            <KPICard
-              key={i}
-              title="Loading..."
-              value=""
-              icon={<ChartBarIcon className="h-8 w-8" />}
-              loading={true}
-            />
+            <div key={i} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 animate-pulse">
+              <div className="h-6 bg-gray-200 rounded w-32 mb-4"></div>
+              <div className="h-10 bg-gray-200 rounded w-48"></div>
+            </div>
           ))}
         </div>
         <LoadingSpinner size="lg" text="Loading dashboard data..." className="my-8" />

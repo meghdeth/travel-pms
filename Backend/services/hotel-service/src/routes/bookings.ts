@@ -93,7 +93,7 @@ let mockServices = [
 ];
 
 // Middleware to verify token
-const verifyToken = (req: any, res: any, next: any) => {
+const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
   
   if (!token) {
@@ -106,7 +106,7 @@ const verifyToken = (req: any, res: any, next: any) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as any;
     req.user = decoded;
-    next();
+  return next();
   } catch (error) {
     return res.status(401).json({
       success: false,
@@ -117,14 +117,11 @@ const verifyToken = (req: any, res: any, next: any) => {
 
 // Role-based access control
 const checkRole = (allowedRoles: string[]) => {
-  return (req: any, res: any, next: any) => {
-    if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Insufficient permissions.'
-      });
+  return (req: express.Request & any, res: express.Response, next: express.NextFunction) => {
+    if (!allowedRoles.includes(req.user?.role)) {
+      return res.status(403).json({ success: false, message: 'Access denied. Insufficient permissions.' });
     }
-    next();
+    return next();
   };
 };
 
@@ -144,7 +141,7 @@ router.get('/', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk', 
   query('dateTo').optional().isISO8601(),
   query('page').optional().isInt({ min: 1 }),
   query('limit').optional().isInt({ min: 1, max: 100 })
-], (req: any, res) => {
+], (req: express.Request & any, res: express.Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -215,7 +212,7 @@ router.get('/', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk', 
         .reduce((sum, b) => sum + b.totalAmount, 0)
     };
 
-    res.json({
+  return res.json({
       success: true,
       data: {
         bookings: paginatedBookings,
@@ -227,18 +224,15 @@ router.get('/', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk', 
         },
         summary
       }
-    });
+  });
   } catch (error) {
     logger.error('Get bookings error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+  return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 
 // Get booking by ID
-router.get('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk', 'Finance Department', 'Booking Agent']), (req: any, res) => {
+router.get('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk', 'Finance Department', 'Booking Agent']), (req: express.Request & any, res: express.Response) => {
   try {
     const bookingId = req.params.id;
     const booking = mockBookings.find(b => b.id === bookingId);
@@ -259,16 +253,13 @@ router.get('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk
       canCheckOut: booking.status === 'checked_in'
     };
 
-    res.json({
+  return res.json({
       success: true,
       data: bookingWithExtras
     });
   } catch (error) {
     logger.error('Get booking error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+  return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 
@@ -282,7 +273,7 @@ router.post('/', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk',
   body('checkOut').isISO8601(),
   body('guests').isInt({ min: 1, max: 10 }),
   body('baseAmount').isFloat({ min: 0 })
-], (req: any, res) => {
+], (req: express.Request & any, res: express.Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -304,17 +295,11 @@ router.post('/', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk',
     const checkOutDate = new Date(checkOut);
     
     if (checkInDate >= checkOutDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Check-out date must be after check-in date'
-      });
+      return res.status(400).json({ success: false, message: 'Check-out date must be after check-in date' });
     }
 
     if (checkInDate < new Date()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Check-in date cannot be in the past'
-      });
+      return res.status(400).json({ success: false, message: 'Check-in date cannot be in the past' });
     }
 
     // Calculate nights and amounts
@@ -355,7 +340,7 @@ router.post('/', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk',
       services
     };
 
-    mockBookings.push(newBooking);
+  mockBookings.push(newBooking);
 
     logger.info(`New booking created: ${newBooking.id} by ${req.user.userId}`);
 
@@ -370,17 +355,10 @@ router.post('/', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk',
       });
     }
 
-    res.status(201).json({
-      success: true,
-      message: 'Booking created successfully',
-      data: newBooking
-    });
+  return res.status(201).json({ success: true, message: 'Booking created successfully', data: newBooking });
   } catch (error) {
     logger.error('Create booking error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+  return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 
@@ -393,7 +371,7 @@ router.put('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk
   body('checkOut').optional().isISO8601(),
   body('guests').optional().isInt({ min: 1, max: 10 }),
   body('status').optional().isIn(['confirmed', 'checked_in', 'checked_out', 'cancelled'])
-], (req: any, res) => {
+], (req: express.Request & any, res: express.Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -425,7 +403,7 @@ router.put('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk
       const newCheckOut = checkOut ? new Date(checkOut) : currentBooking.checkOut;
       const newBaseAmount = baseAmount !== undefined ? baseAmount : currentBooking.baseAmount;
       const newDiscountAmount = discountAmount !== undefined ? discountAmount : currentBooking.discountAmount;
-      const newServices = services || currentBooking.services || [];
+  const newServices = services || (currentBooking as any).services || [];
 
       if (newCheckIn >= newCheckOut) {
         return res.status(400).json({
@@ -474,17 +452,10 @@ router.put('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk
       });
     }
 
-    res.json({
-      success: true,
-      message: 'Booking updated successfully',
-      data: updatedBooking
-    });
+  return res.json({ success: true, message: 'Booking updated successfully', data: updatedBooking });
   } catch (error) {
     logger.error('Update booking error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+  return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 
@@ -492,7 +463,7 @@ router.put('/:id', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk
 router.post('/:id/checkin', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk']), [
   body('roomNumber').isLength({ min: 1, max: 10 }).trim(),
   body('actualCheckInTime').optional().isISO8601()
-], (req: any, res) => {
+], (req: express.Request & any, res: express.Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -547,17 +518,10 @@ router.post('/:id/checkin', verifyToken, checkRole(['Hotel Admin', 'Manager', 'F
       });
     }
 
-    res.json({
-      success: true,
-      message: 'Guest checked in successfully',
-      data: updatedBooking
-    });
+  return res.json({ success: true, message: 'Guest checked in successfully', data: updatedBooking });
   } catch (error) {
     logger.error('Check-in error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+  return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 
@@ -566,7 +530,7 @@ router.post('/:id/checkout', verifyToken, checkRole(['Hotel Admin', 'Manager', '
   body('actualCheckOutTime').optional().isISO8601(),
   body('finalAmount').optional().isFloat({ min: 0 }),
   body('additionalCharges').optional().isArray()
-], (req: any, res) => {
+], (req: express.Request & any, res: express.Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -626,17 +590,10 @@ router.post('/:id/checkout', verifyToken, checkRole(['Hotel Admin', 'Manager', '
       });
     }
 
-    res.json({
-      success: true,
-      message: 'Guest checked out successfully',
-      data: updatedBooking
-    });
+  return res.json({ success: true, message: 'Guest checked out successfully', data: updatedBooking });
   } catch (error) {
     logger.error('Check-out error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+  return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 
@@ -644,7 +601,7 @@ router.post('/:id/checkout', verifyToken, checkRole(['Hotel Admin', 'Manager', '
 router.post('/:id/cancel', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Front Desk']), [
   body('reason').isLength({ min: 5, max: 200 }).trim(),
   body('refundAmount').optional().isFloat({ min: 0 })
-], (req: any, res) => {
+], (req: express.Request & any, res: express.Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -701,33 +658,20 @@ router.post('/:id/cancel', verifyToken, checkRole(['Hotel Admin', 'Manager', 'Fr
       });
     }
 
-    res.json({
-      success: true,
-      message: 'Booking cancelled successfully',
-      data: updatedBooking
-    });
+  return res.json({ success: true, message: 'Booking cancelled successfully', data: updatedBooking });
   } catch (error) {
     logger.error('Cancel booking error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+  return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 
 // Get available services/add-ons
-router.get('/services/available', verifyToken, (req: any, res) => {
+router.get('/services/available', verifyToken, (req: express.Request, res: express.Response) => {
   try {
-    res.json({
-      success: true,
-      data: mockServices
-    });
+  return res.json({ success: true, data: mockServices });
   } catch (error) {
     logger.error('Get services error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+  return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 

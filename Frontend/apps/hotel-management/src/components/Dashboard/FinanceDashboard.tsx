@@ -52,8 +52,8 @@ const FinanceDashboard: React.FC = () => {
       
       const response = await dashboardApi.getFinanceOverview(selectedPeriod);
       
-      if (response?.success) {
-        setData(response.data);
+      if (response && (response as any).data) {
+        setData((response as any).data);
       } else {
         throw new Error('Failed to fetch finance data');
       }

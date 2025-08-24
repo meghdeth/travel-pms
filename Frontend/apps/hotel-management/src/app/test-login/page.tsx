@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { hotelAuthService } from '@shared/lib/hotelAuth'
+import { hotelAuthService } from 'shared/lib/hotelAuth'
 
 export default function TestLoginPage() {
   const [result, setResult] = useState<any>(null)

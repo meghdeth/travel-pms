@@ -16,6 +16,7 @@ export default function LoginPage() {
     email: '',
     password: ''
   })
+  const [loginType] = useState<'hotel'>('hotel')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -26,22 +27,10 @@ export default function LoginPage() {
   // Test credentials for different roles
   const testCredentials = [
     {
-      role: 'GOD Admin',
-      email: 'god@hotelpms.com',
-      password: 'GodAdmin123!',
-      description: 'Full system access - create, edit, delete everything'
-    },
-    {
-      role: 'Super Admin',
-      email: 'super@hotelpms.com', 
-      password: 'SuperAdmin123!',
-      description: 'Full access except delete operations'
-    },
-    {
       role: 'Hotel Admin',
-      email: 'admin@grandhoteldowntown.com',
+      email: 'admin@grandhotel.com',
       password: 'Admin123!', 
-      description: 'Hotel management, no system-level access'
+      description: 'Hotel admin - full hotel management access'
     }
   ]
 
@@ -49,6 +38,7 @@ export default function LoginPage() {
   const fillTestCredentials = (email: string, password: string) => {
     setFormData({ email, password })
   }
+
 
   const loadHotelUsers = useCallback(async () => {
     try {
@@ -154,15 +144,41 @@ export default function LoginPage() {
     
     setIsLoading(true)
     try {
-      await authLogin(formData.email.trim(), formData.password)
-      
-      // Only clear form on successful login
-      setFormData({ email: '', password: '' })
-      setErrors({})
-      setIsLoggedIn(true)
-      
-      console.log('Login successful, waiting for AuthContext to update...')
-    
+      // Direct API call to backend for hotel admin login
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email.trim(),
+          password: formData.password
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Hotel admin login failed')
+      }
+
+      if (result.success && result.data) {
+        // Store auth data in sessionStorage (more secure, no SSR issues)
+        sessionStorage.setItem('hotel_token', result.data.token)
+        sessionStorage.setItem('hotel_user', JSON.stringify(result.data.user))
+        sessionStorage.setItem('hotel_id', result.data.user.hotelId)
+
+        // Clear form and redirect
+        setFormData({ email: '', password: '' })
+        setErrors({})
+        setIsLoggedIn(true)
+        setCurrentUser(result.data.user)
+        
+        console.log('Hotel admin login successful:', result.data.user)
+        router.push('/admin-dashboard')
+      } else {
+        throw new Error(result.message || 'Hotel admin login failed')
+      }
     } catch (error: any) {
       console.error('Login error:', error)
       // Don't clear form data on error, just show error message
@@ -362,7 +378,7 @@ export default function LoginPage() {
           <Home className="w-12 h-12 text-green-600" />
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Sign in to your account
+          Hotel Admin Login
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
           Access your hotel management dashboard
@@ -442,6 +458,12 @@ export default function LoginPage() {
           <div className="mt-6">
             <div className="text-center">
               <p className="text-sm text-gray-600">
+                Staff member?{' '}
+                <Link href="/staff/login" className="font-medium text-blue-600 hover:text-blue-500">
+                  Staff Login
+                </Link>
+              </p>
+              <p className="text-sm text-gray-600 mt-2">
                 Don't have an account?{' '}
                 <Link href="/register" className="font-medium text-green-600 hover:text-green-500">
                   Register here

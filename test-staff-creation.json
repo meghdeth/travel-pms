@@ -1,0 +1,8 @@
+{
+  "email": "test-staff@grandhotel.com",
+  "firstName": "Test", 
+  "lastName": "Staff",
+  "role": "Front Desk",
+  "password": "TestStaff123!",
+  "phone": "+1234567890"
+}

@@ -59,8 +59,8 @@ const FrontDeskDashboard: React.FC = () => {
       
       const response = await dashboardApi.getFrontDeskOverview();
       
-      if (response?.success) {
-        setData(response.data);
+      if (response && (response as any).data) {
+        setData((response as any).data);
       } else {
         throw new Error('Failed to fetch front desk data');
       }
@@ -77,9 +77,9 @@ const FrontDeskDashboard: React.FC = () => {
     
     try {
       const response = await dashboardApi.searchBookings(searchQuery);
-      if (response?.success) {
+      if (response && (response as any).data) {
         // Handle search results - you might want to show them in a modal or separate component
-        console.log('Search results:', response.data);
+        console.log('Search results:', (response as any).data);
       }
     } catch (error) {
       console.error('Search failed:', error);

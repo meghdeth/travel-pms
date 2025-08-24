@@ -12,7 +12,13 @@
       "Bash(timeout:*)",
       "Bash(taskkill:*)",
       "Bash(npm install:*)",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "Bash(cat:*)",
+      "Bash(npx knex migrate:*)",
+      "Bash(mysql:*)",
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run lint)"
     ],
     "deny": [],
     "ask": []

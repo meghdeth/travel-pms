@@ -58,8 +58,8 @@ const TasksDashboard: React.FC = () => {
       
       const response = await dashboardApi.getTasksOverview();
       
-      if (response?.success) {
-        setData(response.data);
+      if (response && (response as any).data) {
+        setData((response as any).data);
       } else {
         throw new Error('Failed to fetch tasks data');
       }

@@ -26,12 +26,13 @@ export default function StorageTestPage() {
     
     addLog(`Found ${data.allKeys.length} localStorage keys: ${data.allKeys.join(', ')}`)
     
+    let resultData: any = { ...data }
     if (data.hotel_user) {
       try {
         const parsedUser = JSON.parse(data.hotel_user)
         addLog(`✅ Parsed user data: ${JSON.stringify(parsedUser, null, 2)}`)
         addLog(`✅ User role: ${JSON.stringify(parsedUser.role)}`)
-        data.parsedUser = parsedUser
+        resultData.parsedUser = parsedUser
       } catch (e) {
         addLog(`❌ Failed to parse user data: ${e}`)
       }
@@ -43,7 +44,7 @@ export default function StorageTestPage() {
       try {
         const parsedHotel = JSON.parse(data.hotel_data)
         addLog(`✅ Parsed hotel data: ${JSON.stringify(parsedHotel, null, 2)}`)
-        data.parsedHotel = parsedHotel
+        resultData.parsedHotel = parsedHotel
       } catch (e) {
         addLog(`❌ Failed to parse hotel data: ${e}`)
       }
@@ -63,7 +64,7 @@ export default function StorageTestPage() {
       }
     }
     
-    setStorageData(data)
+  setStorageData(resultData)
   }
 
   const testLogin = async () => {

@@ -212,7 +212,7 @@ export function requirePermission(permission: string) {
         });
       }
 
-      next();
+  return next();
     } catch (error) {
       logger.error('Permission check error:', error);
       res.status(500).json({
@@ -249,7 +249,7 @@ export function requireRoleLevel(minimumLevel: RoleLevel) {
         });
       }
 
-      next();
+  return next();
     } catch (error) {
       logger.error('Role level check error:', error);
       res.status(500).json({
@@ -316,7 +316,7 @@ export function validateHotelStatusChange() {
         canModify: true
       };
 
-      next();
+  return next();
     } catch (error) {
       logger.error('Hotel status validation error:', error);
       res.status(500).json({

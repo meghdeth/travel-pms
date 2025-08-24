@@ -18,9 +18,9 @@ import hotelRoutes from './routes/hotel';
 import roomRoutes from './routes/room';
 import authRoutes from './routes/auth';
 import dashboardRoutes from './routes/dashboard';
-import staffRoutes from './routes/staff';
 import voucherRoutes from './routes/vouchers';
 import bookingRoutes from './routes/bookings';
+import hotelStaffRoutes from './routes/hotelStaff';
 import { errorHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
 import { testConnection } from './config/database';
@@ -110,9 +110,9 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/hotels', hotelRoutes);
 app.use('/api/v1/rooms', roomRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
-app.use('/api/v1/staff', staffRoutes);
 app.use('/api/v1/vouchers', voucherRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
+app.use('/api/v1/hotel', hotelStaffRoutes);
 
 // Stats endpoint for Super Admin
 app.get('/api/v1/stats', (req, res) => {
@@ -165,9 +165,10 @@ app.post('/api/v1/upload', upload.array('images', 10), (req, res) => {
     });
   } catch (error) {
     logger.error('File upload error:', error);
+    const message = (error as any)?.message || String(error);
     res.status(500).json({
       error: 'File upload failed',
-      message: error.message
+      message
     });
   }
 });

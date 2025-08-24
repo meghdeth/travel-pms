@@ -58,7 +58,7 @@ class HotelAuthService {
         password: data.password
       };
       console.log('HotelAuth - Login payload:', loginPayload);
-      const response = await apiClient.post('/hotel/login', loginPayload);
+      const response = await apiClient.post('/auth/login', { email: data.email, password: data.password });
       console.log('HotelAuth - Login response:', response.data);
       
       if (response.data.success) {
@@ -91,6 +91,38 @@ class HotelAuthService {
         throw new Error(error.response.data.message);
       }
       throw new Error('Login failed. Please check your credentials and try again.');
+    }
+  }
+
+  async staffLogin(email: string, password: string): Promise<HotelAuthResponse> {
+    try {
+      console.log('HotelAuth - Staff login for:', email);
+      const response = await apiClient.post('/auth/staff/login', { email, password });
+      console.log('HotelAuth - Staff login response:', response.data);
+      
+      if (response.data.success) {
+        const authData = response.data.data;
+        console.log('🔐 [HotelAuth] Staff auth data received:', authData);
+        
+        // Set auth data in cookies
+        cookieAuthService.setAuthToken(authData.token);
+        cookieAuthService.setRefreshToken(authData.refreshToken || authData.token); // Use token as refresh if not provided
+        cookieAuthService.setUser(authData.user);
+        
+        // Verify cookies were set
+        console.log('🔐 [HotelAuth] Staff verification - Token set:', !!cookieAuthService.getAuthToken());
+        console.log('🔐 [HotelAuth] Staff verification - User set:', !!cookieAuthService.getUser());
+        
+        return authData;
+      } else {
+        throw new Error(response.data.message || 'Staff login failed');
+      }
+    } catch (error: any) {
+      console.error('HotelAuth - Staff login error:', error);
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw new Error('Staff login failed. Please check your credentials and try again.');
     }
   }
 

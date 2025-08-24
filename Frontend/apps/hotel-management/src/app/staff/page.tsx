@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Plus, Filter, Users, UserCheck, UserX, AlertTriangle, Edit, Trash2, Mail, Phone } from 'lucide-react'
+import { Search, Plus, Filter, Users, User, UserCheck, UserX, AlertTriangle, Edit, Trash2, Mail, Phone } from 'lucide-react'
+import DataTable, { Column } from '../../components/ui/DataTable'
+import StaffCard from '../../components/ui/StaffCard'
 import { hotelApiService, StaffMember, StaffStatistics, UpdateStaffMemberData } from '../../services/hotelApiService'
-import { hotelAuthService } from 'shared/lib/hotelAuth'
 import { useAuth } from '../../contexts/AuthContext'
+import { auth } from '../../utils/auth'
 import DashboardLayout from '../../components/Dashboard/DashboardLayout'
 import AddStaffModal from '../../components/AddStaffModal'
 import { ROLE_OPTIONS, STATUS_OPTIONS, STATUS_COLORS, getRoleColor, getRoleIcon } from '../../constants/roles'
@@ -27,7 +29,7 @@ const StatusIcon = ({ status }: { status: StaffMember['status'] }) => {
 }
 
 export default function StaffManagement() {
-  const { user, hotel } = useAuth()
+  const { user: authUser, hotel } = useAuth()
   const router = useRouter()
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [statistics, setStatistics] = useState<StaffStatistics | null>(null)
@@ -37,52 +39,57 @@ export default function StaffManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedRole, setSelectedRole] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
+
+  // Use fallback to sessionStorage if AuthContext user is null
+  const user = authUser || auth.getUser()
 
   // Authentication and data loading
   useEffect(() => {
-    // Debug authentication state
-    console.log('🔍 [StaffPage] User from auth context:', user)
-    console.log('🔍 [StaffPage] Hotel from auth context:', hotel)
-    console.log('🔍 [StaffPage] isAuthenticated check:', hotelAuthService.isAuthenticated())
-    console.log('🔍 [StaffPage] Token exists:', hotelAuthService.getToken())
-    console.log('🔍 [StaffPage] Hotel ID:', hotelAuthService.getHotelId())
-    console.log('🔍 [StaffPage] User from service:', hotelAuthService.getUser())
-    
-    // TEMPORARY: First try to login programmatically and then load data
-    console.log('🔍 [StaffPage] Attempting programmatic login for testing...')
-    testLogin()
-  }, [user, hotel, router])
-
-  const testLogin = async () => {
-    try {
-      console.log('🔍 [testLogin] Attempting login with test credentials')
-      const result = await hotelAuthService.login('god@hotelpms.com', 'GodAdmin123!')
-      console.log('🔍 [testLogin] Login successful:', result)
+    const checkAuthAndLoad = () => {
+      // Debug authentication state
+      const sessionUser = auth.getUser()
+      const sessionToken = auth.getToken()
+      const sessionHotelId = auth.getHotelId()
       
-      // Wait a moment for cookies to be set, then try loading data with the hotel ID from the result
-      setTimeout(() => {
-        const hotelId = result.hotel?.hotel_id || result.user?.hotelId || result.user?.hotel_id
-        console.log('🔍 [testLogin] Hotel ID from login result:', hotelId)
-        
-        if (hotelId) {
-          loadStaffDataWithHotelId(hotelId.toString())
-        } else {
-          // Try with default hotel ID if not found in result
-          console.log('🔍 [testLogin] No hotel ID found, trying with 1000000001')
-          loadStaffDataWithHotelId('1000000001')
-        }
-      }, 1000)
-    } catch (error) {
-      console.error('🔍 [testLogin] Login failed:', error)
-      setError(`Login failed: ${error}`)
-      setLoading(false)
+      console.log('🔍 [StaffPage] AuthContext user:', authUser)
+      console.log('🔍 [StaffPage] SessionStorage user:', sessionUser)
+      console.log('🔍 [StaffPage] Final user:', user)
+      console.log('🔍 [StaffPage] Token exists:', sessionToken ? 'EXISTS' : 'MISSING')
+      console.log('🔍 [StaffPage] Hotel ID:', sessionHotelId)
+      console.log('🔍 [StaffPage] User role:', user?.role)
+      
+      // Check if user is authenticated
+      const isAuthenticated = authUser || (sessionToken && sessionUser)
+      if (!isAuthenticated) {
+        console.log('🔍 [StaffPage] Not authenticated, redirecting to login')
+        router.push('/login')
+        return
+      }
+      
+      // Check if user is admin (only admins can access staff management)
+      const isAdmin = user?.role === 'Hotel Admin'
+      if (!isAdmin) {
+        console.log('🔍 [StaffPage] Not admin, redirecting to staff dashboard')
+        router.push('/staffdashboard')
+        return
+      }
+      
+      // Load staff data using stored auth/hotel information
+      loadStaffData()
     }
-  }
+    
+    // Add small delay to ensure sessionStorage is ready
+    const timer = setTimeout(checkAuthAndLoad, 100)
+    return () => clearTimeout(timer)
+  }, [user, authUser, router])
+
+  // NOTE: testLogin removed to prevent automatic dev login that can mask real auth issues.
 
   const loadStaffDataWithHotelId = async (testHotelId: string) => {
     console.log('🔍 [loadStaffDataWithHotelId] Loading data for hotel ID:', testHotelId)
-    console.log('🔍 [loadStaffDataWithHotelId] Current token:', hotelAuthService.getToken() ? 'EXISTS' : 'MISSING')
-    console.log('🔍 [loadStaffDataWithHotelId] User data:', hotelAuthService.getUser())
+    console.log('🔍 [loadStaffDataWithHotelId] Current token:', auth.getToken() ? 'EXISTS' : 'MISSING')
+    console.log('🔍 [loadStaffDataWithHotelId] User data:', auth.getUser())
 
     try {
       setLoading(true)
@@ -117,11 +124,11 @@ export default function StaffManagement() {
   }
 
   const loadStaffData = async () => {
-    let hotelId = hotelAuthService.getHotelId()
+    let hotelId = auth.getHotelId()
     
     // Fallback: try to get hotel ID from user data
     if (!hotelId) {
-      const userData = hotelAuthService.getUser()
+      const userData = auth.getUser()
       hotelId = userData?.hotelId || userData?.hotel_id
       console.log('🔍 [loadStaffData] Using fallback hotel ID from user data:', hotelId)
     }
@@ -145,6 +152,9 @@ export default function StaffManagement() {
         hotelApiService.getStaffStatistics(hotelId)
       ])
       
+      console.log('🔍 [loadStaffData] Staff response:', staffResponse)
+      console.log('🔍 [loadStaffData] Stats response:', statsResponse)
+      
       if (staffResponse) {
         setStaff(staffResponse)
       }
@@ -153,12 +163,15 @@ export default function StaffManagement() {
         setStatistics(statsResponse)
       }
     } catch (error: any) {
-      console.error('Error loading staff data:', error)
+      console.error('🔍 [loadStaffData] Error loading staff data:', error)
+      console.error('🔍 [loadStaffData] Error response:', error.response?.data)
+      console.error('🔍 [loadStaffData] Error status:', error.response?.status)
+      
       // Check if it's an authentication error
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
         setError('Session expired. Please refresh the page or log in again.')
       } else {
-        setError('Failed to load staff data. Please try again.')
+        setError(`Failed to load staff data: ${error.message}`)
       }
     } finally {
       setLoading(false)
@@ -166,7 +179,11 @@ export default function StaffManagement() {
   }
 
   const handleCreateStaff = async (staffData: any) => {
-    const hotelId = hotelAuthService.getHotelId()
+    let hotelId = auth.getHotelId()
+    if (!hotelId) {
+      const userData = auth.getUser()
+      hotelId = userData?.hotelId || userData?.hotel_id
+    }
     if (!hotelId) return
     
     try {
@@ -180,7 +197,7 @@ export default function StaffManagement() {
   }
 
   const handleUpdateStaffStatus = async (staffId: string, status: 'active' | 'inactive' | 'suspended') => {
-    const hotelId = hotelAuthService.getHotelId()
+    const hotelId = auth.getHotelId()
     if (!hotelId) return
     
     try {
@@ -195,7 +212,7 @@ export default function StaffManagement() {
   const handleDeleteStaff = async (staffId: string) => {
     if (!confirm('Are you sure you want to delete this staff member?')) return
     
-    const hotelId = hotelAuthService.getHotelId()
+    const hotelId = auth.getHotelId()
     if (!hotelId) return
     
     try {
@@ -219,6 +236,107 @@ export default function StaffManagement() {
     
     return matchesSearch && matchesRole && matchesStatus
   })
+
+  // Define table columns
+  const staffColumns: Column<StaffMember>[] = [
+    {
+      key: 'name',
+      header: 'Staff Member',
+      render: (member) => (
+        <div className="flex items-center">
+          <div className="flex-shrink-0 h-10 w-10">
+            <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+              <User className="h-6 w-6 text-gray-600" />
+            </div>
+          </div>
+          <div className="ml-4">
+            <div className="text-sm font-medium text-gray-900">
+              {member.first_name} {member.last_name}
+            </div>
+            <div className="text-sm text-gray-500">
+              ID: {member.hotel_user_id}
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'role',
+      header: 'Role',
+      render: (member) => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(member.role)}`}>
+          <RoleIcon role={member.role} />
+          <span className="ml-1">{member.role}</span>
+        </span>
+      )
+    },
+    {
+      key: 'status',
+      header: 'Status', 
+      render: (member) => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[member.status as keyof typeof STATUS_COLORS] || 'bg-gray-100 text-gray-800'}`}>
+          <StatusIcon status={member.status} />
+          <span className="ml-1 capitalize">{member.status}</span>
+        </span>
+      )
+    },
+    {
+      key: 'contact',
+      header: 'Contact',
+      render: (member) => (
+        <div>
+          <div className="flex items-center space-x-2 text-sm text-gray-900">
+            <Mail className="h-4 w-4 text-gray-400" />
+            <span>{member.email}</span>
+          </div>
+          {member.phone && (
+            <div className="flex items-center space-x-2 text-sm text-gray-500 mt-1">
+              <Phone className="h-4 w-4 text-gray-400" />
+              <span>{member.phone}</span>
+            </div>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'last_login',
+      header: 'Last Login',
+      render: (member) => (
+        <span className="text-sm text-gray-500">
+          {member.last_login ? new Date(member.last_login).toLocaleDateString() : 'Never'}
+        </span>
+      )
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (member) => (
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => handleUpdateStaffStatus(
+              member.hotel_user_id, 
+              member.status === 'active' ? 'inactive' : 'active'
+            )}
+            className={`p-1 rounded ${
+              member.status === 'active' 
+                ? 'text-red-600 hover:text-red-900' 
+                : 'text-green-600 hover:text-green-900'
+            }`}
+            title={member.status === 'active' ? 'Deactivate' : 'Activate'}
+          >
+            {member.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+          </button>
+          <button
+            onClick={() => handleDeleteStaff(member.hotel_user_id)}
+            className="text-red-600 hover:text-red-900 p-1 rounded"
+            title="Delete staff member"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )
+    }
+  ]
 
 
   if (loading) {
@@ -375,122 +493,64 @@ export default function StaffManagement() {
           </div>
         </div>
 
-        {/* Staff Table */}
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Staff Member
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Contact
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Login
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredStaff.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                      <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                      <p className="text-lg font-medium">No staff members found</p>
-                      <p className="text-sm">Try adjusting your search or filters</p>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredStaff.map((member) => (
-                    <tr key={member.hotel_user_id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                              <User className="h-6 w-6 text-gray-600" />
-                            </div>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {member.first_name} {member.last_name}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              ID: {member.hotel_user_id}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          getRoleColor(member.role)
-                        }`}>
-                          <RoleIcon role={member.role} />
-                          <span className="ml-1">{member.role}</span>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          STATUS_COLORS[member.status as keyof typeof STATUS_COLORS] || 'bg-gray-100 text-gray-800'
-                        }`}>
-                          <StatusIcon status={member.status} />
-                          <span className="ml-1 capitalize">{member.status}</span>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="flex items-center space-x-2">
-                          <Mail className="h-4 w-4 text-gray-400" />
-                          <span>{member.email}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Phone className="h-4 w-4 text-gray-400" />
-                          <span>{member.phone}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {member.last_login ? new Date(member.last_login).toLocaleDateString() : 'Never'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleUpdateStaffStatus(
-                              member.hotel_user_id, 
-                              member.status === 'active' ? 'inactive' : 'active'
-                            )}
-                            className={`p-1 rounded ${
-                              member.status === 'active' 
-                                ? 'text-red-600 hover:text-red-900' 
-                                : 'text-green-600 hover:text-green-900'
-                            }`}
-                            title={member.status === 'active' ? 'Deactivate' : 'Activate'}
-                          >
-                            {member.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteStaff(member.hotel_user_id)}
-                            className="text-red-600 hover:text-red-900 p-1 rounded"
-                            title="Delete staff member"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        {/* View Toggle */}
+        <div className="mb-4 flex justify-end">
+          <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-4 py-2 text-sm font-medium ${
+                viewMode === 'table' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Table View
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`px-4 py-2 text-sm font-medium ${
+                viewMode === 'cards' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Card View
+            </button>
           </div>
         </div>
+
+        {/* Staff Data Display */}
+        {viewMode === 'table' ? (
+          <DataTable
+            data={filteredStaff}
+            columns={staffColumns}
+            loading={loading}
+            emptyMessage="Try adjusting your search or filters"
+            emptyIcon={<Users className="mx-auto h-12 w-12 text-gray-400" />}
+          />
+        ) : (
+          <div className={filteredStaff.length > 0 ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : ""}>
+            {filteredStaff.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-sm border p-8 text-center">
+                <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <p className="text-lg font-medium text-gray-900">No staff members found</p>
+                <p className="text-sm text-gray-500">Try adjusting your search or filters</p>
+              </div>
+            ) : (
+              filteredStaff.map((member) => (
+                <StaffCard
+                  key={member.hotel_user_id}
+                  staff={member}
+                  onToggleStatus={(staffId, currentStatus) => 
+                    handleUpdateStaffStatus(staffId, currentStatus === 'active' ? 'inactive' : 'active')
+                  }
+                  onDelete={handleDeleteStaff}
+                  showActions={true}
+                />
+              ))
+            )}
+          </div>
+        )}
 
         <AddStaffModal
           isOpen={showAddModal}

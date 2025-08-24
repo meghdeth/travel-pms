@@ -35,7 +35,7 @@ const verifyToken = (req: any, res: any, next: any) => {
       firstName: decoded.firstName,
       lastName: decoded.lastName
     };
-    next();
+  return next();
   } catch (error) {
     return res.status(401).json({
       success: false,
@@ -45,7 +45,7 @@ const verifyToken = (req: any, res: any, next: any) => {
 };
 
 // Get all hotels (public endpoint with optional filters)
-router.get('/', async (req, res) => {
+router.get('/', async (req: any, res: any) => {
   try {
     const { city, country, rating, status } = req.query;
     let query = db('hotels').select([
@@ -104,7 +104,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get hotel by ID
-router.get('/:hotelId', async (req, res) => {
+router.get('/:hotelId', async (req: any, res: any) => {
   try {
     const { hotelId } = req.params;
     
@@ -146,7 +146,7 @@ router.patch('/:hotelId/status', [
   validateHotelStatusChange(),
   body('status').isIn(['active', 'inactive', 'delisted', 'deleted']),
   body('reason').optional().isString()
-], async (req: any, res) => {
+], async (req: any, res: any) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -220,7 +220,7 @@ router.post('/', [
   body('city').isLength({ min: 2, max: 50 }),
   body('country').isLength({ min: 2, max: 50 }),
   body('phone').matches(/^\+?[\d\s\-\(\)]+$/)
-], async (req: any, res) => {
+], async (req: any, res: any) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -298,7 +298,7 @@ router.put('/:hotelId', [
   body('address').optional().isLength({ min: 5, max: 200 }),
   body('city').optional().isLength({ min: 2, max: 50 }),
   body('country').optional().isLength({ min: 2, max: 50 })
-], async (req: any, res) => {
+], async (req: any, res: any) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -351,7 +351,7 @@ router.put('/:hotelId', [
 router.get('/admin/all', [
   verifyToken,
   requireRoleLevel(RoleLevel.ADMIN)
-], async (req: any, res) => {
+], async (req: any, res: any) => {
   try {
     const { status, search } = req.query;
     

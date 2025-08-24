@@ -37,7 +37,7 @@ let mockBookings = [
   }
 ];
 
-let mockRoomStatus = [
+let mockRoomStatus: any[] = [
   { roomNumber: '101', status: 'occupied', guestName: 'John Doe', checkOut: '2024-08-28' },
   { roomNumber: '102', status: 'occupied', guestName: 'Jane Smith', checkOut: '2024-08-26' },
   { roomNumber: '103', status: 'available', guestName: null, checkOut: null },
@@ -45,7 +45,7 @@ let mockRoomStatus = [
   { roomNumber: '105', status: 'maintenance', guestName: null, checkOut: null },
 ];
 
-let mockTasks = [
+let mockTasks: any[] = [
   {
     id: 1,
     hotelId: 1,
@@ -83,8 +83,8 @@ const verifyToken = (req: any, res: any, next: any) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as any;
-    req.user = decoded;
-    next();
+  req.user = decoded;
+  return next();
   } catch (error) {
     return res.status(401).json({
       success: false,
@@ -102,12 +102,12 @@ const checkRole = (allowedRoles: string[]) => {
         message: 'Access denied. Insufficient permissions.'
       });
     }
-    next();
+    return next();
   };
 };
 
 // Admin & Manager Dashboard - KPIs and Analytics
-router.get('/admin/kpis', verifyToken, checkRole(['Hotel Admin', 'Manager']), (req: any, res) => {
+router.get('/admin/kpis', verifyToken, checkRole(['Hotel Admin', 'Manager']), (req: any, res: any) => {
   try {
     const { hotelId } = req.query;
     
@@ -149,7 +149,7 @@ router.get('/admin/kpis', verifyToken, checkRole(['Hotel Admin', 'Manager']), (r
 });
 
 // Admin & Manager Dashboard - Recent Activity
-router.get('/admin/activity', verifyToken, checkRole(['Hotel Admin', 'Manager']), (req: any, res) => {
+router.get('/admin/activity', verifyToken, checkRole(['Hotel Admin', 'Manager']), (req: any, res: any) => {
   try {
     const recentBookings = mockBookings
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -195,7 +195,7 @@ router.get('/admin/activity', verifyToken, checkRole(['Hotel Admin', 'Manager'])
 });
 
 // Front Desk Dashboard - Today's Overview
-router.get('/frontdesk/overview', verifyToken, checkRole(['Front Desk', 'Hotel Admin', 'Manager']), (req: any, res) => {
+router.get('/frontdesk/overview', verifyToken, checkRole(['Front Desk', 'Hotel Admin', 'Manager']), (req: any, res: any) => {
   try {
     const today = new Date().toDateString();
     
@@ -237,7 +237,7 @@ router.get('/frontdesk/overview', verifyToken, checkRole(['Front Desk', 'Hotel A
 });
 
 // Finance Dashboard - Revenue and Transactions
-router.get('/finance/overview', verifyToken, checkRole(['Finance Department', 'Hotel Admin', 'Manager']), (req: any, res) => {
+router.get('/finance/overview', verifyToken, checkRole(['Finance Department', 'Hotel Admin', 'Manager']), (req: any, res: any) => {
   try {
     const { period = 'today' } = req.query;
     
@@ -314,7 +314,7 @@ router.get('/finance/overview', verifyToken, checkRole(['Finance Department', 'H
 });
 
 // Maintenance & Cleaning Tasks Dashboard
-router.get('/tasks/overview', verifyToken, checkRole(['Maintenance', 'Kitchen', 'Service Boy', 'Hotel Admin', 'Manager']), (req: any, res) => {
+router.get('/tasks/overview', verifyToken, checkRole(['Maintenance', 'Kitchen', 'Service Boy', 'Hotel Admin', 'Manager']), (req: any, res: any) => {
   try {
     const userRole = req.user.role.toLowerCase();
     
@@ -356,7 +356,7 @@ router.get('/tasks/overview', verifyToken, checkRole(['Maintenance', 'Kitchen', 
 });
 
 // Update task status
-router.put('/tasks/:taskId/status', verifyToken, (req: any, res) => {
+router.put('/tasks/:taskId/status', verifyToken, (req: any, res: any) => {
   try {
     const taskId = parseInt(req.params.taskId);
     const { status, notes } = req.body;
@@ -407,7 +407,7 @@ router.post('/tasks', verifyToken, [
   body('description').isLength({ min: 10, max: 500 }),
   body('assignedTo').isIn(['maintenance', 'cleaning', 'kitchen', 'room_service']),
   body('priority').isIn(['low', 'medium', 'high', 'urgent'])
-], (req: any, res) => {
+], (req: any, res: any) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -457,7 +457,7 @@ router.post('/tasks', verifyToken, [
 });
 
 // Quick booking search
-router.get('/search/bookings', verifyToken, checkRole(['Front Desk', 'Hotel Admin', 'Manager', 'Booking Agent']), (req: any, res) => {
+router.get('/search/bookings', verifyToken, checkRole(['Front Desk', 'Hotel Admin', 'Manager', 'Booking Agent']), (req: any, res: any) => {
   try {
     const { query } = req.query;
     

@@ -8,7 +8,7 @@ interface AddStaffModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: (data: CreateStaffMemberData) => Promise<void>
-  currentUserRole: string
+  currentUserRole: any
 }
 
 const AddStaffModal: React.FC<AddStaffModalProps> = ({
@@ -22,6 +22,7 @@ const AddStaffModal: React.FC<AddStaffModalProps> = ({
     last_name: '',
     email: '',
     phone: '',
+    password: '',
     role: 'Front Desk'
   })
   const [password, setPassword] = useState('')
@@ -73,6 +74,7 @@ const AddStaffModal: React.FC<AddStaffModalProps> = ({
         last_name: '',
         email: '',
         phone: '',
+        password: '',
         role: 'Front Desk'
       })
       setPassword('')
@@ -100,8 +102,13 @@ const AddStaffModal: React.FC<AddStaffModalProps> = ({
 
   if (!isOpen) return null
 
-  // Only Hotel Admins can add staff
-  const canAdd = currentUserRole === 'Hotel Admin'
+  // Normalize role: currentUserRole can be a string or an object { name, code }
+  const roleName = typeof currentUserRole === 'string'
+    ? currentUserRole
+    : currentUserRole?.name || currentUserRole?.role || currentUserRole?.code || ''
+
+  // Only Hotel Admins (by name or code '1') can add staff
+  const canAdd = roleName === 'Hotel Admin' || roleName === '1' || roleName === 'Super Admin' || roleName === 'GOD Admin'
 
   if (!canAdd) {
     return (

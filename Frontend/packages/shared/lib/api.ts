@@ -16,8 +16,8 @@ export const apiClient = axios.create({
 // Request interceptor for auth token
 apiClient.interceptors.request.use(
   (config) => {
-    // Use cookie-based authentication instead of localStorage
-    const token = cookieAuthService.getAuthToken();
+    // Use sessionStorage for auth token (no SSR issues, secure)
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('hotel_token') : null;
     
     console.log('🔐 [API] Request interceptor - Token exists:', !!token);
     if (token) {
@@ -57,11 +57,11 @@ apiClient.interceptors.response.use(
         (error.response?.status === 403 && 
          error.response?.data?.message?.includes('Invalid hotel user token'))) {
       
-      // Clear all auth cookies
-      cookieAuthService.clearAuth();
-      
-      // Redirect to login if on client side
+      // Clear sessionStorage auth data
       if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('hotel_token');
+        sessionStorage.removeItem('hotel_user');
+        sessionStorage.removeItem('hotel_id');
         window.location.href = '/login';
       }
     }
